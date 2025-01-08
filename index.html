@@ -136,9 +136,11 @@
       createRoomButton.addEventListener("click", () => {
         const roomId = roomIdInput.value.trim();
         if (roomId) {
+          // GitHub Pagesのため
+          const gitHubRepoName = "deno-websocket-app";
           const roomUrl = `${
             window.location.origin
-          }/?roomId=${encodeURIComponent(roomId)}`;
+          }/${gitHubRepoName}?roomId=${encodeURIComponent(roomId)}`;
           // ローカルストレージにroomIdを保存
           // roomIdが保存されている人がホスト
           localStorage.setItem("slide_sync_roomId", roomId);
