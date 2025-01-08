@@ -23,12 +23,19 @@ Deno.serve({
     console.log(`Client ${clientId} joined room ${roomId}`);
 
     socket.onmessage = (event) => {
-      console.log(
-        `Message from client ${clientId} in room ${roomId}: ${event.data}`
-      );
-      for (const [_, clientSocket] of clients) {
-        if (clientSocket.readyState === WebSocket.OPEN) {
-          clientSocket.send(`Client ${clientId}: ${event.data}`);
+      const data = JSON.parse(event.data);
+
+      // メッセージの内容がスライド情報かどうか確認
+      if (data.action === "slide") {
+        const currentSlide = data.slide;
+        console.log(`Slide changed to ${currentSlide} in room ${roomId}`);
+        // ルーム内の全クライアントにスライド情報を送信
+        for (const [_, clientSocket] of clients) {
+          if (clientSocket.readyState === WebSocket.OPEN) {
+            clientSocket.send(
+              JSON.stringify({ action: "slide", slide: currentSlide })
+            );
+          }
         }
       }
     };

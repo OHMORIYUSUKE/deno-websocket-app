@@ -1,34 +1,97 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WebSocket Chat</title>
+    <title>スライド共有ルーム</title>
+    <style>
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        background-color: #f0f0f0;
+      }
+      input#roomIdInput {
+        width: 100%; /* 幅を変更 */
+        padding: 15px 20px; /* パディングを増やしてボックスを大きくする */
+        font-size: 18px; /* フォントサイズを大きくする */
+        border-radius: 5px; /* 角を丸くする */
+        border: 2px solid #ccc; /* 境界線の色 */
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* ボックスシャドウ */
+      }
+      input#roomIdInput:focus {
+        border-color: #4caf50; /* フォーカス時の枠線色 */
+        outline: none; /* フォーカス時にデフォルトのアウトラインを削除 */
+      }
+      #slideRoom {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+      }
+      iframe {
+        width: 100%;
+        height: 80%;
+        border: none;
+      }
+      #setupRoom {
+        text-align: center;
+      }
+      button {
+        margin: 10px;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+      }
+      button:hover {
+        background-color: #45a049;
+      }
+      p,
+      h3 {
+        padding: 0;
+        margin: 0;
+      }
+    </style>
   </head>
   <body>
-    <h1>WebSocket Chat</h1>
-    <div id="setupRoom" style="display: none">
-      <input type="text" id="roomIdInput" placeholder="Enter Room ID" />
-      <button id="createRoomButton">Create Room</button>
-      <p id="roomUrl"></p>
+    <!-- ルーム作成セクション -->
+    <div id="setupRoom">
+      <input type="text" id="roomIdInput" placeholder="スライドのURLを入力" />
+      <p>
+        SpeakerDeckで取得した埋め込みコードに含まれる「src」のURLを入力してください
+      </p>
+      <button id="createRoomButton">ルーム作成</button>
     </div>
-    <div id="chatRoom" style="display: none">
-      <h2>Room: <span id="currentRoomId"></span></h2>
-      <div
-        id="messages"
-        style="
-          border: 1px solid #ccc;
-          height: 300px;
-          overflow-y: scroll;
-          padding: 10px;
-        "
-      ></div>
-      <input
-        type="text"
-        id="messageInput"
-        placeholder="Type your message here"
-      />
-      <button id="sendButton">Send</button>
+
+    <!-- スライド表示セクション -->
+    <div id="slideRoom" style="display: none">
+      <h3 id="slideUrl">スライドURL: <a id="currentRoomId" href=""></a></h3>
+      <div style="display: flex; align-items: center">
+        <div id="slideController" style="display: flex">
+          <button id="prev">←</button>
+          <button id="next">→</button>
+        </div>
+        <button id="fullscreenBtn" style="margin-left: 10px">
+          スライドをフルスクリーンで表示
+        </button>
+      </div>
+      <p>緑のボタンで操作してください</p>
+      <iframe
+        id="slideFrame"
+        class="speakerdeck-iframe"
+        frameborder="0"
+        src=""
+        allowfullscreen="true"
+      ></iframe>
     </div>
 
     <script>
@@ -38,23 +101,36 @@
       const port = 443;
       const roomIdInput = document.getElementById("roomIdInput");
       const createRoomButton = document.getElementById("createRoomButton");
-      const roomUrlDisplay = document.getElementById("roomUrl");
       const setupRoomDiv = document.getElementById("setupRoom");
-      const chatRoomDiv = document.getElementById("chatRoom");
+      const slideRoomDiv = document.getElementById("slideRoom");
       const currentRoomIdSpan = document.getElementById("currentRoomId");
-      const messagesDiv = document.getElementById("messages");
-      const messageInput = document.getElementById("messageInput");
-      const sendButton = document.getElementById("sendButton");
+      const prevButton = document.getElementById("prev");
+      const nextButton = document.getElementById("next");
+      const fullscreenBtn = document.getElementById("fullscreenBtn");
+      const slideFrame = document.getElementById("slideFrame");
 
       let socket;
+      let currentSlide = 1;
 
-      // Check for roomId in URL and join automatically if present
+      // ルームIDをURLパラメータで取得して、WebSocket接続をセットアップ
       const urlParams = new URLSearchParams(window.location.search);
       const roomIdFromUrl = urlParams.get("roomId");
+
       if (roomIdFromUrl) {
         setupWebSocket(roomIdFromUrl);
+        // ローカルストレージにroomIdがなければスライド操作不可
+        console.log(roomIdFromUrl);
+        if (localStorage.getItem("slide_sync_roomId") != roomIdFromUrl) {
+          document.getElementById("slideController").style.display = "none";
+        }
+        currentRoomIdSpan.textContent = roomIdFromUrl; // ルームIDを表示
+        currentRoomIdSpan.href = roomIdFromUrl; // ここでリンクにURLを設定
+        slideFrame.src = roomIdFromUrl; // iflameにURLを設定
+        setupRoomDiv.style.display = "none"; // ルーム作成セクションを非表示
+        slideRoomDiv.style.display = "block"; // スライド表示セクションを表示
       } else {
-        setupRoomDiv.style.display = "block";
+        setupRoomDiv.style.display = "block"; // ルーム作成セクションを表示
+        slideRoomDiv.style.display = "none"; // スライド表示セクションを非表示
       }
 
       createRoomButton.addEventListener("click", () => {
@@ -63,12 +139,16 @@
           const roomUrl = `${
             window.location.origin
           }/?roomId=${encodeURIComponent(roomId)}`;
-          window.location.href = roomUrl;
+          // ローカルストレージにroomIdを保存
+          // roomIdが保存されている人がホスト
+          localStorage.setItem("slide_sync_roomId", roomId);
+          window.location.href = roomUrl; // URLを更新してリダイレクト
         } else {
-          alert("Please enter a valid Room ID.");
+          alert("URLを入力してください。");
         }
       });
 
+      // WebSocketのセットアップ
       function setupWebSocket(roomId) {
         const socketUrl = `${protocol}${host}:${port}/?roomId=${encodeURIComponent(
           roomId
@@ -76,45 +156,63 @@
         socket = new WebSocket(socketUrl);
 
         socket.onopen = () => {
-          console.log("WebSocket is open now.");
-          chatRoomDiv.style.display = "block";
-          currentRoomIdSpan.textContent = roomId;
+          console.log("WebSocket接続中...");
+          slideFrame.src = roomId; // スライドURLを設定
         };
 
         socket.onmessage = (event) => {
-          const message = document.createElement("p");
-          message.textContent = event.data;
-          messagesDiv.appendChild(message);
-          messagesDiv.scrollTop = messagesDiv.scrollHeight; // Scroll to the bottom
+          const data = JSON.parse(event.data);
+          // メッセージがスライドの変更情報であることを確認
+          if (data.action === "slide") {
+            currentSlide = data.slide;
+            console.log(`Received slide change: ${currentSlide}`);
+            updateSlide();
+          }
         };
 
-        sendButton.addEventListener("click", () => {
-          if (
-            messageInput.value.trim() !== "" &&
-            socket.readyState === WebSocket.OPEN
-          ) {
-            socket.send(messageInput.value);
-            messageInput.value = "";
-          } else if (socket.readyState !== WebSocket.OPEN) {
-            console.log(
-              "WebSocket is not open. Please wait until it connects."
+        socket.onerror = (error) => {
+          console.error("WebSocketエラー:", error);
+        };
+
+        socket.onclose = () => {
+          console.log("WebSocket接続終了");
+        };
+
+        // スライド操作ボタン
+        prevButton.addEventListener("click", () => {
+          if (currentSlide > 1) {
+            currentSlide--;
+            updateSlide();
+            // スライド変更情報をサーバーに送信
+            socket.send(
+              JSON.stringify({ action: "slide", slide: currentSlide })
             );
           }
         });
 
-        messageInput.addEventListener("keydown", (event) => {
-          if (event.key === "Enter") {
-            sendButton.click();
-          }
+        nextButton.addEventListener("click", () => {
+          currentSlide++;
+          updateSlide();
+          // スライド変更情報をサーバーに送信
+          socket.send(JSON.stringify({ action: "slide", slide: currentSlide }));
         });
 
-        socket.onerror = (error) => {
-          console.error("WebSocket error:", error);
-        };
+        fullscreenBtn.addEventListener("click", () => {
+          if (slideFrame.requestFullscreen) {
+            slideFrame.requestFullscreen();
+          } else if (slideFrame.webkitRequestFullscreen) {
+            slideFrame.webkitRequestFullscreen();
+          } else if (slideFrame.msRequestFullscreen) {
+            slideFrame.msRequestFullscreen();
+          }
+        });
+      }
 
-        socket.onclose = () => {
-          console.log("WebSocket is closed.");
-        };
+      // スライドの更新
+      function updateSlide() {
+        slideFrame.src = `${
+          slideFrame.src.split("?")[0]
+        }?slide=${currentSlide}`;
       }
     </script>
   </body>
