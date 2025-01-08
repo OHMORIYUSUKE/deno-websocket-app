@@ -60,6 +60,20 @@
         padding: 0;
         margin: 0;
       }
+      footer {
+        width: 100%;
+        padding: 10px 20px;
+        text-align: center;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+      }
+      footer a {
+        text-decoration: none;
+      }
+      footer a:hover {
+        text-decoration: underline;
+      }
     </style>
   </head>
   <body>
@@ -74,6 +88,10 @@
 
     <!-- スライド表示セクション -->
     <div id="slideRoom" style="display: none">
+      <h3 id="slideUrl" style="color: red">
+        👆このページのURLを共有すると表示されているスライドを共有、スライド送りも同期されるよ
+      </h3>
+      <a style="font-size: large" id="toTopPage" href="/">トップに戻る</a>
       <h3 id="slideUrl">スライドURL: <a id="currentRoomId" href=""></a></h3>
       <div style="display: flex; align-items: center">
         <div id="slideController" style="display: flex">
@@ -93,11 +111,20 @@
         allowfullscreen="true"
       ></iframe>
     </div>
-
+    <footer>
+      ソースコード：
+      <a href="https://github.com/OHMORIYUSUKE/deno-websocket-app"
+        >https://github.com/OHMORIYUSUKE/deno-websocket-app</a
+      >
+      作者：
+      <a href="https://x.com/uutan1108">@uutan1108</a>
+    </footer>
     <script>
       const protocol =
         window.location.protocol === "https:" ? "wss://" : "ws://";
       const host = "uutan-deno-websocket-app.deno.dev";
+      // GitHub Pagesのため
+      const gitHubRepoName = "deno-websocket-app";
       const port = 443;
       const roomIdInput = document.getElementById("roomIdInput");
       const createRoomButton = document.getElementById("createRoomButton");
@@ -123,6 +150,7 @@
         if (localStorage.getItem("slide_sync_roomId") != roomIdFromUrl) {
           document.getElementById("slideController").style.display = "none";
         }
+        toTopPage.href = `/${gitHubRepoName}`;
         currentRoomIdSpan.textContent = roomIdFromUrl; // ルームIDを表示
         currentRoomIdSpan.href = roomIdFromUrl; // ここでリンクにURLを設定
         slideFrame.src = roomIdFromUrl; // iflameにURLを設定
@@ -136,8 +164,6 @@
       createRoomButton.addEventListener("click", () => {
         const roomId = roomIdInput.value.trim();
         if (roomId) {
-          // GitHub Pagesのため
-          const gitHubRepoName = "deno-websocket-app";
           const roomUrl = `${
             window.location.origin
           }/${gitHubRepoName}?roomId=${encodeURIComponent(roomId)}`;
