@@ -7,72 +7,115 @@
   </head>
   <body>
     <h1>WebSocket Chat</h1>
-    <div
-      id="messages"
-      style="
-        border: 1px solid #ccc;
-        height: 300px;
-        overflow-y: scroll;
-        padding: 10px;
-      "
-    ></div>
-    <input type="text" id="messageInput" placeholder="Type your message here" />
-    <button id="sendButton">Send</button>
+    <div id="setupRoom" style="display: none">
+      <input type="text" id="roomIdInput" placeholder="Enter Room ID" />
+      <button id="createRoomButton">Create Room</button>
+      <p id="roomUrl"></p>
+    </div>
+    <div id="chatRoom" style="display: none">
+      <h2>Room: <span id="currentRoomId"></span></h2>
+      <div
+        id="messages"
+        style="
+          border: 1px solid #ccc;
+          height: 300px;
+          overflow-y: scroll;
+          padding: 10px;
+        "
+      ></div>
+      <input
+        type="text"
+        id="messageInput"
+        placeholder="Type your message here"
+      />
+      <button id="sendButton">Send</button>
+    </div>
 
     <script>
-      // WebSocket 接続先 URL を動的に設定
       const protocol =
         window.location.protocol === "https:" ? "wss://" : "ws://";
-      const host = "uutan-deno-websocket-app.deno.dev";
+      const host = "localhost";
       const port = 443;
-
-      // WebSocket 接続先 URL を構築
-      const socketUrl = protocol + host + ":" + port + "/"; // `/` は URL の最後に追加
-      console.log(socketUrl);
-
-      // WebSocket の接続を確立
-      const socket = new WebSocket(socketUrl);
+      const roomIdInput = document.getElementById("roomIdInput");
+      const createRoomButton = document.getElementById("createRoomButton");
+      const roomUrlDisplay = document.getElementById("roomUrl");
+      const setupRoomDiv = document.getElementById("setupRoom");
+      const chatRoomDiv = document.getElementById("chatRoom");
+      const currentRoomIdSpan = document.getElementById("currentRoomId");
       const messagesDiv = document.getElementById("messages");
       const messageInput = document.getElementById("messageInput");
       const sendButton = document.getElementById("sendButton");
 
-      // WebSocket が OPEN 状態になった時のみメッセージを送信できるようにする
-      socket.onopen = () => {
-        console.log("WebSocket is open now.");
-      };
+      let socket;
 
-      socket.onmessage = (event) => {
-        const message = document.createElement("p");
-        message.textContent = event.data;
-        messagesDiv.appendChild(message);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight; // Scroll to the bottom
-      };
+      // Check for roomId in URL and join automatically if present
+      const urlParams = new URLSearchParams(window.location.search);
+      const roomIdFromUrl = urlParams.get("roomId");
+      if (roomIdFromUrl) {
+        setupWebSocket(roomIdFromUrl);
+      } else {
+        setupRoomDiv.style.display = "block";
+      }
 
-      sendButton.addEventListener("click", () => {
-        if (
-          messageInput.value.trim() !== "" &&
-          socket.readyState === WebSocket.OPEN
-        ) {
-          socket.send(messageInput.value);
-          messageInput.value = "";
-        } else if (socket.readyState !== WebSocket.OPEN) {
-          console.log("WebSocket is not open. Please wait until it connects.");
+      createRoomButton.addEventListener("click", () => {
+        const roomId = roomIdInput.value.trim();
+        if (roomId) {
+          const roomUrl = `${
+            window.location.origin
+          }/?roomId=${encodeURIComponent(roomId)}`;
+          window.location.href = roomUrl;
+        } else {
+          alert("Please enter a valid Room ID.");
         }
       });
 
-      messageInput.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") {
-          sendButton.click();
-        }
-      });
+      function setupWebSocket(roomId) {
+        const socketUrl = `${protocol}${host}:${port}/?roomId=${encodeURIComponent(
+          roomId
+        )}`;
+        socket = new WebSocket(socketUrl);
 
-      socket.onerror = (error) => {
-        console.error("WebSocket error:", error);
-      };
+        socket.onopen = () => {
+          console.log("WebSocket is open now.");
+          chatRoomDiv.style.display = "block";
+          currentRoomIdSpan.textContent = roomId;
+        };
 
-      socket.onclose = () => {
-        console.log("WebSocket is closed.");
-      };
+        socket.onmessage = (event) => {
+          const message = document.createElement("p");
+          message.textContent = event.data;
+          messagesDiv.appendChild(message);
+          messagesDiv.scrollTop = messagesDiv.scrollHeight; // Scroll to the bottom
+        };
+
+        sendButton.addEventListener("click", () => {
+          if (
+            messageInput.value.trim() !== "" &&
+            socket.readyState === WebSocket.OPEN
+          ) {
+            socket.send(messageInput.value);
+            messageInput.value = "";
+          } else if (socket.readyState !== WebSocket.OPEN) {
+            console.log(
+              "WebSocket is not open. Please wait until it connects."
+            );
+          }
+        });
+
+        messageInput.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            sendButton.click();
+          }
+        });
+
+        socket.onerror = (error) => {
+          console.error("WebSocket error:", error);
+        };
+
+        socket.onclose = () => {
+          console.log("WebSocket is closed.");
+        };
+      }
     </script>
   </body>
 </html>
