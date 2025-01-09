@@ -13,7 +13,7 @@
         margin: 0;
         background-color: #f0f0f0;
       }
-      input#roomIdInput {
+      input#slideUrlInput {
         width: 100%; /* 幅を変更 */
         padding: 15px 20px; /* パディングを増やしてボックスを大きくする */
         font-size: 18px; /* フォントサイズを大きくする */
@@ -21,11 +21,11 @@
         border: 2px solid #ccc; /* 境界線の色 */
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* ボックスシャドウ */
       }
-      input#roomIdInput:focus {
+      input#slideUrlInput:focus {
         border-color: #4caf50; /* フォーカス時の枠線色 */
         outline: none; /* フォーカス時にデフォルトのアウトラインを削除 */
       }
-      #slideRoom {
+      #presentationRoom {
         width: 100%;
         height: 100%;
         display: flex;
@@ -39,7 +39,7 @@
         height: 72%;
         border: none;
       }
-      #setupRoom {
+      #startPresentation {
         text-align: center;
       }
       button {
@@ -89,42 +89,50 @@
   </head>
   <body>
     <!-- ルーム作成セクション -->
-    <div id="setupRoom">
-      <input type="text" id="roomIdInput" placeholder="スライドのURLを入力" />
+    <div id="startPresentation">
+      <input type="text" id="slideUrlInput" placeholder="スライドのURLを入力" />
       <p>
         SpeakerDeckで取得した埋め込みコードに含まれる「src」のURLを入力してください
       </p>
-      <button id="createRoomButton">プレゼンテーション開始</button>
+      <button id="startPresentationButton">プレゼンテーション開始</button>
+      <footer>
+        ソースコード：
+        <a href="https://github.com/OHMORIYUSUKE/deno-websocket-app"
+          >https://github.com/OHMORIYUSUKE/deno-websocket-app</a
+        >
+        　作者：
+        <a href="https://x.com/uutan1108">@uutan1108</a>
+      </footer>
     </div>
 
     <!-- スライド表示セクション -->
-    <div id="slideRoom" style="display: none">
-      <h4 class="slideController" style="color: red">
+    <div id="presentationRoom" style="display: none">
+      <h4 class="speaker">
         [発表者へ]
         <br />・このページのURLを共有すると表示されているスライドを視聴者に共有、スライド送りを視聴者の画面に同期させることができます。
         <br />・視聴者にURLを共有してください。
         <br />・「プレゼンテーション開始画面に戻る」から別なスライドを共有し直せます。
       </h4>
-      <h4 class="audience" style="color: red">
+      <h4 class="audience">
         [視聴者へ]
         <br />・発表者のスライド送りと同期されています。
         <br />・「プレゼンテーション開始する」から発表者としてスライドを共有できます。
       </h4>
       <div style="display: flex; align-items: center">
-        <div class="slideController" style="display: flex">
+        <div class="speaker" style="display: flex">
           <button id="prev">←</button>
           <button id="next">→</button>
         </div>
         <button class="audience" id="fullscreenBtn" style="margin-left: 10px">
           スライドをフルスクリーンで表示
         </button>
-        <button class="slideController" id="copyUrlBtn" onclick="copyUrl()">
+        <button class="speaker" id="copyUrlBtn" onclick="copyUrl()">
           このページのURLをコピー
         </button>
         <a id="toTopPage" href="/">プレゼンテーション開始画面に戻る</a>
       </div>
-      <p>
-        必ず緑のボタンで操作してください。スライド内のボタンで操作するとスライド送りが同期されません。
+      <p style="color: red">
+        必ず緑のボタンで操作してください。スライド内のボタンやブラウザバックの操作するとスライド送りが同期されません。
       </p>
       <iframe
         id="slideFrame"
@@ -134,90 +142,84 @@
         allowfullscreen="true"
       ></iframe>
     </div>
-    <footer>
-      ソースコード：
-      <a href="https://github.com/OHMORIYUSUKE/deno-websocket-app"
-        >https://github.com/OHMORIYUSUKE/deno-websocket-app</a
-      >
-      　作者：
-      <a href="https://x.com/uutan1108">@uutan1108</a>
-    </footer>
+
     <script>
       const protocol =
         window.location.protocol === "https:" ? "wss://" : "ws://";
-      const host = "uutan-deno-websocket-app.deno.dev";
+      const host = "localhost";
       // GitHub Pagesのため
-      const gitHubRepoName = "deno-websocket-app";
+      const gitHubRepoName = "";
       const port = 443;
-      const roomIdInput = document.getElementById("roomIdInput");
-      const createRoomButton = document.getElementById("createRoomButton");
-      const setupRoomDiv = document.getElementById("setupRoom");
-      const slideRoomDiv = document.getElementById("slideRoom");
+      const slideUrlInput = document.getElementById("slideUrlInput");
+      const startPresentationButton = document.getElementById(
+        "startPresentationButton"
+      );
+      const startPresentationDiv = document.getElementById("startPresentation");
+      const presentationRoomDiv = document.getElementById("presentationRoom");
       const prevButton = document.getElementById("prev");
       const nextButton = document.getElementById("next");
       const fullscreenBtn = document.getElementById("fullscreenBtn");
       const slideFrame = document.getElementById("slideFrame");
-      const toTopPage = document.getElementById("toTopPage");
+      const toTopPageLink = document.getElementById("toTopPage");
 
       let socket;
       let currentSlide = 1;
 
       // ルームIDをURLパラメータで取得して、WebSocket接続をセットアップ
       const urlParams = new URLSearchParams(window.location.search);
-      const roomIdFromUrl = urlParams.get("roomId");
+      const slideUrlFromUrl = urlParams.get("slideUrl");
 
-      if (roomIdFromUrl) {
-        setupWebSocket(roomIdFromUrl);
-        // ローカルストレージにroomIdがなければスライド操作不可
-        if (localStorage.getItem("slide_sync_roomId") != roomIdFromUrl) {
-          const controllers =
-            document.getElementsByClassName("slideController");
-          for (const controller of controllers) {
-            controller.style.display = "none";
+      if (slideUrlFromUrl) {
+        setupWebSocket(slideUrlFromUrl);
+        // ローカルストレージにslideUrlがなければスライド操作不可
+        if (localStorage.getItem("slide_sync_slideUrl") != slideUrlFromUrl) {
+          const speakerClasses = document.getElementsByClassName("speaker");
+          for (const speakerClass of speakerClasses) {
+            speakerClass.style.display = "none";
           }
-          toTopPage.textContent = "プレゼンテーション開始する";
+          toTopPageLink.textContent = "プレゼンテーション開始する";
         }
         // 視聴者の場合表示する
-        if (localStorage.getItem("slide_sync_roomId") == roomIdFromUrl) {
-          const audiences = document.getElementsByClassName("audience");
-          for (const audience of audiences) {
-            audience.style.display = "none";
+        if (localStorage.getItem("slide_sync_slideUrl") == slideUrlFromUrl) {
+          const audiencesClasses = document.getElementsByClassName("audience");
+          for (const audiencesClass of audiencesClasses) {
+            audiencesClass.style.display = "none";
           }
         }
-        toTopPage.href = `/${gitHubRepoName}`;
-        slideFrame.src = roomIdFromUrl; // iflameにURLを設定
-        setupRoomDiv.style.display = "none"; // ルーム作成セクションを非表示
-        slideRoomDiv.style.display = "block"; // スライド表示セクションを表示
+        toTopPageLink.href = `/${gitHubRepoName}`;
+        slideFrame.src = slideUrlFromUrl; // iflameにURLを設定
+        startPresentationDiv.style.display = "none"; // ルーム作成セクションを非表示
+        presentationRoomDiv.style.display = "block"; // スライド表示セクションを表示
       } else {
-        setupRoomDiv.style.display = "block"; // ルーム作成セクションを表示
-        slideRoomDiv.style.display = "none"; // スライド表示セクションを非表示
+        startPresentationDiv.style.display = "block"; // ルーム作成セクションを表示
+        presentationRoomDiv.style.display = "none"; // スライド表示セクションを非表示
       }
 
-      createRoomButton.addEventListener("click", () => {
-        const roomId = roomIdInput.value.trim();
-        if (roomId) {
-          const roomUrl = `${
+      startPresentationButton.addEventListener("click", () => {
+        const slideUrl = slideUrlInput.value.trim();
+        if (slideUrl) {
+          const presentationRoomUrl = `${
             window.location.origin
-          }/${gitHubRepoName}?roomId=${encodeURIComponent(roomId)}`;
-          // ローカルストレージにroomIdを保存
-          // roomIdが保存されている人がホスト
-          localStorage.setItem("slide_sync_roomId", roomId);
-          window.location.href = roomUrl; // URLを更新してリダイレクト
+          }/${gitHubRepoName}?slideUrl=${encodeURIComponent(slideUrl)}`;
+          // ローカルストレージにslideUrlを保存
+          // slideUrlが保存されている人がホスト
+          localStorage.setItem("slide_sync_slideUrl", slideUrl);
+          window.location.href = presentationRoomUrl; // URLを更新してリダイレクト
         } else {
           alert("URLを入力してください。");
         }
       });
 
       // WebSocketのセットアップ
-      function setupWebSocket(roomId) {
-        const socketUrl = `${protocol}${host}:${port}/?roomId=${encodeURIComponent(
-          roomId
+      function setupWebSocket(slideUrl) {
+        const socketUrl = `${protocol}${host}:${port}/?slideUrl=${encodeURIComponent(
+          slideUrl
         )}`;
         socket = new WebSocket(socketUrl);
 
         socket.onopen = () => {
           console.log("WebSocket接続中...");
-          slideFrame.src = roomId; // スライドURLを設定
+          slideFrame.src = slideUrl; // スライドURLを設定
         };
 
         socket.onmessage = (event) => {
