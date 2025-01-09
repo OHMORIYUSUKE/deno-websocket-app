@@ -1,0 +1,79 @@
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  background-color: #f0f0f0;
+}
+input#slideUrlInput {
+  width: 100%; /* 幅を変更 */
+  padding: 15px 20px; /* パディングを増やしてボックスを大きくする */
+  font-size: 18px; /* フォントサイズを大きくする */
+  border-radius: 5px; /* 角を丸くする */
+  border: 2px solid #ccc; /* 境界線の色 */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* ボックスシャドウ */
+}
+input#slideUrlInput:focus {
+  border-color: #4caf50; /* フォーカス時の枠線色 */
+  outline: none; /* フォーカス時にデフォルトのアウトラインを削除 */
+}
+#presentationRoom {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+iframe {
+  width: 100%;
+  height: 72%;
+  border: none;
+}
+#startPresentation {
+  text-align: center;
+}
+button {
+  margin: 10px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+}
+button:hover {
+  background-color: #45a049;
+}
+p {
+  padding: 0;
+  margin: 0;
+}
+footer {
+  width: 100%;
+  padding: 10px 20px;
+  text-align: center;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+}
+footer a {
+  text-decoration: none;
+}
+footer a:hover {
+  text-decoration: underline;
+}
+#toTopPage {
+  margin: 10px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  text-decoration: none;
+}

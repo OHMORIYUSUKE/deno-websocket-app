@@ -4,88 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Speaker Deckのスライド送りを簡単に複数端末で同期できる君</title>
-    <style>
-      body {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        margin: 0;
-        background-color: #f0f0f0;
-      }
-      input#slideUrlInput {
-        width: 100%; /* 幅を変更 */
-        padding: 15px 20px; /* パディングを増やしてボックスを大きくする */
-        font-size: 18px; /* フォントサイズを大きくする */
-        border-radius: 5px; /* 角を丸くする */
-        border: 2px solid #ccc; /* 境界線の色 */
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* ボックスシャドウ */
-      }
-      input#slideUrlInput:focus {
-        border-color: #4caf50; /* フォーカス時の枠線色 */
-        outline: none; /* フォーカス時にデフォルトのアウトラインを削除 */
-      }
-      #presentationRoom {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        overflow: hidden;
-      }
-      iframe {
-        width: 100%;
-        height: 72%;
-        border: none;
-      }
-      #startPresentation {
-        text-align: center;
-      }
-      button {
-        margin: 10px;
-        padding: 10px 20px;
-        font-size: 16px;
-        cursor: pointer;
-        background-color: #4caf50;
-        color: white;
-        border: none;
-        border-radius: 5px;
-      }
-      button:hover {
-        background-color: #45a049;
-      }
-      p,
-      h4 {
-        padding: 0;
-        margin: 0;
-      }
-      footer {
-        width: 100%;
-        padding: 10px 20px;
-        text-align: center;
-        position: fixed;
-        bottom: 0;
-        left: 0;
-      }
-      footer a {
-        text-decoration: none;
-      }
-      footer a:hover {
-        text-decoration: underline;
-      }
-      #toTopPage {
-        margin: 10px;
-        padding: 10px 20px;
-        font-size: 16px;
-        cursor: pointer;
-        background-color: #4caf50;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        text-decoration: none;
-      }
-    </style>
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <!-- ルーム作成セクション -->
@@ -107,17 +26,18 @@
 
     <!-- スライド表示セクション -->
     <div id="presentationRoom" style="display: none">
-      <h4 class="speaker">
+      <p class="speaker">
         [発表者へ]
         <br />・このページのURLを共有すると表示されているスライドを視聴者に共有、スライド送りを視聴者の画面に同期させることができます。
-        <br />・視聴者にURLを共有してください。
+        <br />・視聴者にこのページのURLを共有してください。
+        <br />・スライド外にカーソルを当てた状態でキーボードの左右の矢印キーでもスライド送りができます。
         <br />・「プレゼンテーション開始画面に戻る」から別なスライドを共有し直せます。
-      </h4>
-      <h4 class="audience">
+      </p>
+      <p class="audience">
         [視聴者へ]
-        <br />・発表者のスライド送りと同期されています。
+        <br />・発表者のスライド送りと同期されているため、発表者と同じページが表示されます。
         <br />・「プレゼンテーション開始する」から発表者としてスライドを共有できます。
-      </h4>
+      </p>
       <div style="display: flex; align-items: center">
         <div class="speaker" style="display: flex">
           <button id="prev">←</button>
@@ -131,7 +51,7 @@
         </button>
         <a id="toTopPage" href="/">プレゼンテーション開始画面に戻る</a>
       </div>
-      <p style="color: red">
+      <p style="color: red" class="speaker">
         必ず緑のボタンで操作してください。スライド内のボタンやブラウザバックの操作するとスライド送りが同期されません。
       </p>
       <iframe
@@ -142,151 +62,6 @@
         allowfullscreen="true"
       ></iframe>
     </div>
-
-    <script>
-      const protocol =
-        window.location.protocol === "https:" ? "wss://" : "ws://";
-      const host = "uutan-deno-websocket-app.deno.dev";
-      // GitHub Pagesのため
-      const gitHubRepoName = "deno-websocket-app";
-      const port = 443;
-      const slideUrlInput = document.getElementById("slideUrlInput");
-      const startPresentationButton = document.getElementById(
-        "startPresentationButton"
-      );
-      const startPresentationDiv = document.getElementById("startPresentation");
-      const presentationRoomDiv = document.getElementById("presentationRoom");
-      const prevButton = document.getElementById("prev");
-      const nextButton = document.getElementById("next");
-      const fullscreenBtn = document.getElementById("fullscreenBtn");
-      const slideFrame = document.getElementById("slideFrame");
-      const toTopPageLink = document.getElementById("toTopPage");
-
-      let socket;
-      let currentSlide = 1;
-
-      // ルームIDをURLパラメータで取得して、WebSocket接続をセットアップ
-      const urlParams = new URLSearchParams(window.location.search);
-      const slideUrlFromUrl = urlParams.get("slideUrl");
-
-      if (slideUrlFromUrl) {
-        setupWebSocket(slideUrlFromUrl);
-        // ローカルストレージにslideUrlがなければスライド操作不可
-        if (localStorage.getItem("slide_sync_slideUrl") != slideUrlFromUrl) {
-          const speakerClasses = document.getElementsByClassName("speaker");
-          for (const speakerClass of speakerClasses) {
-            speakerClass.style.display = "none";
-          }
-          toTopPageLink.textContent = "プレゼンテーション開始する";
-        }
-        // 視聴者の場合表示する
-        if (localStorage.getItem("slide_sync_slideUrl") == slideUrlFromUrl) {
-          const audiencesClasses = document.getElementsByClassName("audience");
-          for (const audiencesClass of audiencesClasses) {
-            audiencesClass.style.display = "none";
-          }
-        }
-        toTopPageLink.href = `/${gitHubRepoName}`;
-        slideFrame.src = slideUrlFromUrl; // iflameにURLを設定
-        startPresentationDiv.style.display = "none"; // ルーム作成セクションを非表示
-        presentationRoomDiv.style.display = "block"; // スライド表示セクションを表示
-      } else {
-        startPresentationDiv.style.display = "block"; // ルーム作成セクションを表示
-        presentationRoomDiv.style.display = "none"; // スライド表示セクションを非表示
-      }
-
-      startPresentationButton.addEventListener("click", () => {
-        const slideUrl = slideUrlInput.value.trim();
-        if (slideUrl) {
-          const presentationRoomUrl = `${
-            window.location.origin
-          }/${gitHubRepoName}?slideUrl=${encodeURIComponent(slideUrl)}`;
-          // ローカルストレージにslideUrlを保存
-          // slideUrlが保存されている人がホスト
-          localStorage.setItem("slide_sync_slideUrl", slideUrl);
-          window.location.href = presentationRoomUrl; // URLを更新してリダイレクト
-        } else {
-          alert("URLを入力してください。");
-        }
-      });
-
-      // WebSocketのセットアップ
-      function setupWebSocket(slideUrl) {
-        const socketUrl = `${protocol}${host}:${port}/?slideUrl=${encodeURIComponent(
-          slideUrl
-        )}`;
-        socket = new WebSocket(socketUrl);
-
-        socket.onopen = () => {
-          console.log("WebSocket接続中...");
-          slideFrame.src = slideUrl; // スライドURLを設定
-        };
-
-        socket.onmessage = (event) => {
-          const data = JSON.parse(event.data);
-          // メッセージがスライドの変更情報であることを確認
-          if (data.action === "slide") {
-            currentSlide = data.slide;
-            console.log(`Received slide change: ${currentSlide}`);
-            updateSlide();
-          }
-        };
-
-        socket.onerror = (error) => {
-          console.error("WebSocketエラー:", error);
-        };
-
-        socket.onclose = () => {
-          console.log("WebSocket接続終了");
-        };
-
-        // スライド操作ボタン
-        prevButton.addEventListener("click", () => {
-          if (currentSlide > 1) {
-            currentSlide--;
-            updateSlide();
-            // スライド変更情報をサーバーに送信
-            socket.send(
-              JSON.stringify({ action: "slide", slide: currentSlide })
-            );
-          }
-        });
-
-        nextButton.addEventListener("click", () => {
-          currentSlide++;
-          updateSlide();
-          // スライド変更情報をサーバーに送信
-          socket.send(JSON.stringify({ action: "slide", slide: currentSlide }));
-        });
-
-        fullscreenBtn.addEventListener("click", () => {
-          if (slideFrame.requestFullscreen) {
-            slideFrame.requestFullscreen();
-          } else if (slideFrame.webkitRequestFullscreen) {
-            slideFrame.webkitRequestFullscreen();
-          } else if (slideFrame.msRequestFullscreen) {
-            slideFrame.msRequestFullscreen();
-          }
-        });
-      }
-
-      // スライドの更新
-      function updateSlide() {
-        slideFrame.src = `${
-          slideFrame.src.split("?")[0]
-        }?slide=${currentSlide}`;
-      }
-
-      // コピーURL
-      function copyUrl() {
-        const element = document.createElement("input");
-        element.value = location.href;
-        document.body.appendChild(element);
-        element.select();
-        document.execCommand("copy");
-        document.body.removeChild(element);
-        window.alert("コピーしました");
-      }
-    </script>
+    <script src="script.js"></script>
   </body>
 </html>
