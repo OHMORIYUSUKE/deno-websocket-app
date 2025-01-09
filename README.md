@@ -1,7 +1,8 @@
-# deno-websocket-app
+# Speaker Deck のスライド送りを簡単に複数端末で同期できる君
 
 ## アプリについて
 
+名前：Speaker Deck のスライド送りを簡単に複数端末で同期できる君
 URL：https://ohmoriyusuke.github.io/deno-websocket-app/
 
 Speaker Deck の URL を入力してスライドを共有、スライド送りも同期できます

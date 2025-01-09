@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>スライド共有ルーム</title>
+    <title>Speaker Deckのスライド送りを簡単に複数端末で同期できる君</title>
     <style>
       body {
         display: flex;
@@ -36,7 +36,7 @@
       }
       iframe {
         width: 100%;
-        height: 80%;
+        height: 72%;
         border: none;
       }
       #setupRoom {
@@ -56,7 +56,7 @@
         background-color: #45a049;
       }
       p,
-      h3 {
+      h4 {
         padding: 0;
         margin: 0;
       }
@@ -74,6 +74,17 @@
       footer a:hover {
         text-decoration: underline;
       }
+      #toTopPage {
+        margin: 10px;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        text-decoration: none;
+      }
     </style>
   </head>
   <body>
@@ -83,26 +94,38 @@
       <p>
         SpeakerDeckで取得した埋め込みコードに含まれる「src」のURLを入力してください
       </p>
-      <button id="createRoomButton">ルーム作成</button>
+      <button id="createRoomButton">プレゼンテーション開始</button>
     </div>
 
     <!-- スライド表示セクション -->
     <div id="slideRoom" style="display: none">
-      <h3 id="slideUrl" style="color: red">
-        👆このページのURLを共有すると表示されているスライドを共有、スライド送りも同期されるよ
-      </h3>
-      <a style="font-size: large" id="toTopPage" href="/">トップに戻る</a>
-      <h3 id="slideUrl">スライドURL: <a id="currentRoomId" href=""></a></h3>
+      <h4 class="slideController" style="color: red">
+        [発表者へ]
+        <br />・このページのURLを共有すると表示されているスライドを視聴者に共有、スライド送りを視聴者の画面に同期させることができます。
+        <br />・視聴者にURLを共有してください。
+        <br />・「プレゼンテーション開始画面に戻る」から別なスライドを共有し直せます。
+      </h4>
+      <h4 class="audience" style="color: red">
+        [視聴者へ]
+        <br />・発表者のスライド送りと同期されています。
+        <br />・「プレゼンテーション開始する」から発表者としてスライドを共有できます。
+      </h4>
       <div style="display: flex; align-items: center">
-        <div id="slideController" style="display: flex">
+        <div class="slideController" style="display: flex">
           <button id="prev">←</button>
           <button id="next">→</button>
         </div>
-        <button id="fullscreenBtn" style="margin-left: 10px">
+        <button class="audience" id="fullscreenBtn" style="margin-left: 10px">
           スライドをフルスクリーンで表示
         </button>
+        <button class="slideController" id="copyUrlBtn" onclick="copyUrl()">
+          このページのURLをコピー
+        </button>
+        <a id="toTopPage" href="/">プレゼンテーション開始画面に戻る</a>
       </div>
-      <p>緑のボタンで操作してください</p>
+      <p>
+        必ず緑のボタンで操作してください。スライド内のボタンで操作するとスライド送りが同期されません。
+      </p>
       <iframe
         id="slideFrame"
         class="speakerdeck-iframe"
@@ -116,7 +139,7 @@
       <a href="https://github.com/OHMORIYUSUKE/deno-websocket-app"
         >https://github.com/OHMORIYUSUKE/deno-websocket-app</a
       >
-      作者：
+      　作者：
       <a href="https://x.com/uutan1108">@uutan1108</a>
     </footer>
     <script>
@@ -130,11 +153,11 @@
       const createRoomButton = document.getElementById("createRoomButton");
       const setupRoomDiv = document.getElementById("setupRoom");
       const slideRoomDiv = document.getElementById("slideRoom");
-      const currentRoomIdSpan = document.getElementById("currentRoomId");
       const prevButton = document.getElementById("prev");
       const nextButton = document.getElementById("next");
       const fullscreenBtn = document.getElementById("fullscreenBtn");
       const slideFrame = document.getElementById("slideFrame");
+      const toTopPage = document.getElementById("toTopPage");
 
       let socket;
       let currentSlide = 1;
@@ -146,13 +169,22 @@
       if (roomIdFromUrl) {
         setupWebSocket(roomIdFromUrl);
         // ローカルストレージにroomIdがなければスライド操作不可
-        console.log(roomIdFromUrl);
         if (localStorage.getItem("slide_sync_roomId") != roomIdFromUrl) {
-          document.getElementById("slideController").style.display = "none";
+          const controllers =
+            document.getElementsByClassName("slideController");
+          for (const controller of controllers) {
+            controller.style.display = "none";
+          }
+          toTopPage.textContent = "プレゼンテーション開始する";
+        }
+        // 視聴者の場合表示する
+        if (localStorage.getItem("slide_sync_roomId") == roomIdFromUrl) {
+          const audiences = document.getElementsByClassName("audience");
+          for (const audience of audiences) {
+            audience.style.display = "none";
+          }
         }
         toTopPage.href = `/${gitHubRepoName}`;
-        currentRoomIdSpan.textContent = roomIdFromUrl; // ルームIDを表示
-        currentRoomIdSpan.href = roomIdFromUrl; // ここでリンクにURLを設定
         slideFrame.src = roomIdFromUrl; // iflameにURLを設定
         setupRoomDiv.style.display = "none"; // ルーム作成セクションを非表示
         slideRoomDiv.style.display = "block"; // スライド表示セクションを表示
@@ -241,6 +273,17 @@
         slideFrame.src = `${
           slideFrame.src.split("?")[0]
         }?slide=${currentSlide}`;
+      }
+
+      // コピーURL
+      function copyUrl() {
+        const element = document.createElement("input");
+        element.value = location.href;
+        document.body.appendChild(element);
+        element.select();
+        document.execCommand("copy");
+        document.body.removeChild(element);
+        window.alert("コピーしました");
       }
     </script>
   </body>
