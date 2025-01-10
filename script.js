@@ -1,7 +1,7 @@
 const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
-const host = "localhost";
+const host = "uutan-deno-websocket-app.deno.dev";
 // GitHub Pagesのため
-const gitHubRepoName = "";
+const gitHubRepoName = "deno-websocket-app";
 const port = 443;
 const slideUrlInput = document.getElementById("slideUrlInput");
 const startPresentationButton = document.getElementById(
