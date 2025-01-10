@@ -3,15 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Speaker Deckのスライド送りを簡単に複数端末で同期できる君</title>
+    <title>Google slides のスライド送りを簡単に複数端末で同期できる君</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <!-- ルーム作成セクション -->
     <div id="startPresentation">
-      <input type="text" id="slideUrlInput" placeholder="スライドのURLを入力" />
+      <input
+        type="text"
+        id="slideUrlInput"
+        placeholder="https://docs.google.com/presentation/d/e/.../pub?start=false&loop=false&delayms=3000"
+      />
       <p>
-        SpeakerDeckで取得した埋め込みコードに含まれる「src」のURLを入力してください
+        Google Slides
+        の「ファイル」>「共有」>「ウェブに公開」>「リンク」からスライド公開用のURLを取得し入力してください。
       </p>
       <button id="startPresentationButton">プレゼンテーション開始</button>
       <footer>
@@ -56,10 +61,13 @@
       </p>
       <iframe
         id="slideFrame"
-        class="speakerdeck-iframe"
-        frameborder="0"
         src=""
+        frameborder="0"
+        width="960"
+        height="569"
         allowfullscreen="true"
+        mozallowfullscreen="true"
+        webkitallowfullscreen="true"
       ></iframe>
     </div>
     <script src="script.js"></script>

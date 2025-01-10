@@ -24,7 +24,7 @@ Deno.serve({
     console.log(`Client ${clientId} joined room ${slideUrl}`);
 
     // 現在のスライド番号をKVから取得
-    let currentSlide = (await kv.get(["slides", slideUrl])).value || 0;
+    let currentSlide = (await kv.get(["slides", slideUrl])).value || 1;
 
     // 新しく接続したクライアントに現在のスライド番号を通知
     try {

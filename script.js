@@ -1,7 +1,7 @@
 const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
-const host = "uutan-deno-websocket-app.deno.dev";
+const host = "localhost";
 // GitHub Pagesのため
-const gitHubRepoName = "deno-websocket-app";
+const gitHubRepoName = "";
 const port = 443;
 const slideUrlInput = document.getElementById("slideUrlInput");
 const startPresentationButton = document.getElementById(
@@ -48,8 +48,21 @@ if (slideUrlFromUrl) {
   presentationRoomDiv.style.display = "none"; // スライド表示セクションを非表示
 }
 
+function replacePubWithEmbed(url) {
+  // URLオブジェクトを作成
+  const urlObj = new URL(url);
+
+  // パスが '/pub' で終わる場合のみ '/embed' に置き換え
+  if (urlObj.pathname.endsWith("/pub")) {
+    urlObj.pathname = urlObj.pathname.replace("/pub", "/embed");
+  }
+
+  // 変更されたURLを文字列として返す
+  return urlObj.toString();
+}
+
 startPresentationButton.addEventListener("click", () => {
-  const slideUrl = slideUrlInput.value.trim();
+  const slideUrl = replacePubWithEmbed(slideUrlInput.value.trim());
   if (slideUrl) {
     const presentationRoomUrl = `${
       window.location.origin
