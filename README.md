@@ -10,13 +10,6 @@ Google スライドの URL を入力してスライドを共有、スライド�
 
 ## 開発する
 
-`client/src/lib/socket.ts` の以下のコードをローカルで開発するときは修正する
-
-```diff
-- const host = "uutan-deno-websocket-app.deno.dev";
-+ const host = "localhost";
-```
-
 バックエンドのサーバーを起動
 
 ```sh

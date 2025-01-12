@@ -8,9 +8,11 @@ const IndexPage = () => {
     typeof window !== "undefined" && window.location.protocol === "https:"
       ? "wss://"
       : "ws://";
-  const host = "localhost";
+  const host =
+    process.env.NODE_ENV === "development"
+      ? "localhost"
+      : process.env.NEXT_PUBLIC_WS_HOST;
   const port = 443;
-  const gitHubRepoName = "";
 
   const [slideUrl, setSlideUrl] = useState("");
   const [socket, setSocket] = useState<WebSocket | null>(null);
@@ -46,7 +48,7 @@ const IndexPage = () => {
       const slideUrl = replacePubWithEmbed(slideUrlInput);
       const presentationRoomUrl = `${
         window.location.origin
-      }/${gitHubRepoName}?slideUrl=${encodeURIComponent(slideUrl)}`;
+      }/?slideUrl=${encodeURIComponent(slideUrl)}`;
       localStorage.setItem("slide_sync_slideUrl", slideUrl);
       router.push(presentationRoomUrl);
     } else {
@@ -180,17 +182,26 @@ const IndexPage = () => {
           <button onClick={handleFullscreen}>
             スライドをフルスクリーンで表示
           </button>
-          <button onClick={handleCopyUrl}>このページのURLをコピー</button>
+          {isHost ? (
+            <button onClick={handleCopyUrl}>このページのURLをコピー</button>
+          ) : (
+            <></>
+          )}
           <button onClick={() => router.push("/")}>
             {isHost
               ? "プレゼンテーション開始画面に戻る"
               : "あなたもプレゼンテーション開始する"}
           </button>
+          <br />
           <iframe
             id="slideFrame"
             src={`${slideUrlFromUrl}&slide=${currentSlide}`}
-            width="960"
-            height="569"
+            style={{
+              position: "absolute",
+              left: 0,
+              width: "100%",
+              height: "calc(100vh - 20%)", // 画面の高さに応じて調整
+            }}
             allowFullScreen
           />
         </div>
