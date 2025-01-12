@@ -219,7 +219,14 @@ const IndexPage = () => {
               </ul>
             )}
             {isHost && (
-              <Box sx={{ display: "flex", justifyContent: "center", gap: 3 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  gap: 3,
+                  marginTop: 2,
+                }}
+              >
                 <Button
                   variant="contained"
                   onClick={handlePrev}
