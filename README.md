@@ -22,3 +22,18 @@ index.html の以下のコードをローカルで開発するときは修正す
 - const host = "uutan-deno-websocket-app.deno.dev";
 + const host = "localhost";
 ```
+
+バックエンドのサーバーを起動
+
+```sh
+cd server
+deno run --unstable-kv --allow-net server.ts
+```
+
+フロントエンドのサーバーを起動
+
+```sh
+cd client
+npm i
+npm run dev
+```
