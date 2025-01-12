@@ -37,8 +37,8 @@ jobs:
       - name: Upload to Deno Deploy
         uses: denoland/deployctl@v1
         with:
-          project: "sync-google-slide"
+          project: "uutan-deno-websocket-app"
           entrypoint: "jsr:@deno/nextjs-start"
-          root: "client"
+          root: "./client/"
           include: .next, public
           
