@@ -1,13 +1,22 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Button, TextField, Box, Typography, Paper } from "@mui/material";
+import {
+  Button,
+  TextField,
+  Box,
+  Typography,
+  Paper,
+  Snackbar,
+  SnackbarCloseReason,
+  Alert,
+} from "@mui/material";
 import FullscreenIcon from "@mui/icons-material/Fullscreen";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import ArrowForward from "@mui/icons-material/ArrowForward";
 import ArrowBack from "@mui/icons-material/ArrowBack";
 
 export const ClientComponent = () => {
-    const protocol =
+  const protocol =
     typeof window !== "undefined" && window.location.protocol === "https:"
       ? "wss://"
       : "ws://";
@@ -21,6 +30,8 @@ export const ClientComponent = () => {
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [currentSlide, setCurrentSlide] = useState(1);
   const [isHost, setIsHost] = useState(false);
+  const [copied, setCopied] = useState(false);
+
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -81,10 +92,8 @@ export const ClientComponent = () => {
 
     newSocket.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      console.log("WebSocket メッセージ受信:", data);
       if (data.action === "slide") {
         const pageNumber = data.slide;
-        console.log("スライド番号更新:", pageNumber);
         setCurrentSlide(pageNumber);
       }
     };
@@ -100,7 +109,6 @@ export const ClientComponent = () => {
 
   const updateSlide = (currentSlide: number) => {
     if (socket) {
-      console.log("スライド更新送信:", currentSlide);
       socket.send(JSON.stringify({ action: "slide", slide: currentSlide }));
     }
   };
@@ -140,58 +148,67 @@ export const ClientComponent = () => {
     }
   };
 
-  const handleCopyUrl = () => {
-    const element = document.createElement("input");
-    element.value = location.href;
-    document.body.appendChild(element);
-    element.select();
-    document.execCommand("copy");
-    document.body.removeChild(element);
-    window.alert("コピーしました");
+  const handleCopyUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(location.href);
+      setCopied(true);
+    } catch (err) {
+      console.error("URLのコピーに失敗しました: ", err);
+    }
+  };
+
+  const handleCopiedSnackbarClose = (
+    event: React.SyntheticEvent | Event,
+    reason?: SnackbarCloseReason
+  ) => {
+    if (reason === "clickaway") {
+      return;
+    }
+    setCopied(false);
   };
 
   return (
     <>
       {!slideUrlFromUrl ? (
         <Paper
-        sx={{
-          padding: 3,
-          textAlign: "center",
-          margin: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh', 
-        }}
-      >
-        <div>
-          <TextField
-            label="スライドURL"
-            variant="outlined"
-            fullWidth
-            id="slideUrl"
-            value={slideUrl}
-            onChange={(e) => setSlideUrl(e.target.value)}
-            placeholder="https://docs.google.com/presentation/d/e/.../pub?start=false&loop=false&delayms=3000"
-            sx={{ marginBottom: 2 }}
-          />
-          <Typography
-            variant="body2"
-            color="textSecondary"
-            sx={{ marginBottom: 2, marginTop: 0 }}
-          >
-            Google Slides の「ファイル」{">"}「共有」{">"}「ウェブに公開」
-            {">"}「リンク」からスライド公開用のURLを取得し入力してください。
-          </Typography>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleStartPresentation}
-          >
-            プレゼンテーション開始
-          </Button>
-        </div>
-      </Paper>      
+          sx={{
+            padding: 3,
+            textAlign: "center",
+            margin: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "100vh",
+          }}
+        >
+          <div>
+            <TextField
+              label="スライドURL"
+              variant="outlined"
+              fullWidth
+              id="slideUrl"
+              value={slideUrl}
+              onChange={(e) => setSlideUrl(e.target.value)}
+              placeholder="https://docs.google.com/presentation/d/e/.../pub?start=false&loop=false&delayms=3000"
+              sx={{ marginBottom: 2 }}
+            />
+            <Typography
+              variant="body2"
+              color="textSecondary"
+              sx={{ marginBottom: 2, marginTop: 0 }}
+            >
+              Google Slides の「ファイル」{">"}「共有」{">"}「ウェブに公開」
+              {">"}「リンク」からスライド公開用のURLを取得し入力してください。
+            </Typography>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleStartPresentation}
+            >
+              プレゼンテーション開始
+            </Button>
+          </div>
+        </Paper>
       ) : (
         <Paper
           {...(isHost && { tabIndex: 0, onKeyDown: handleKeyDown })}
@@ -277,14 +294,30 @@ export const ClientComponent = () => {
                 スライドをフルスクリーンで表示
               </Button>
             ) : (
-              <Button
-                variant="outlined"
-                color="secondary"
-                startIcon={<ContentCopyIcon />}
-                onClick={handleCopyUrl}
-              >
-                このページのURLをコピー
-              </Button>
+              <>
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  startIcon={<ContentCopyIcon />}
+                  onClick={handleCopyUrl}
+                >
+                  このページのURLをコピー
+                </Button>
+                <Snackbar
+                  open={copied}
+                  autoHideDuration={2000}
+                  onClose={handleCopiedSnackbarClose}
+                  anchorOrigin={{ vertical: "top", horizontal: "right" }}
+                >
+                  <Alert
+                    severity="success"
+                    variant="filled"
+                    sx={{ width: "100%" }}
+                  >
+                    コピーしました
+                  </Alert>
+                </Snackbar>
+              </>
             )}
             <Button
               variant="contained"

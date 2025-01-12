@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Google スライドのスライド送りを簡単に複数端末で同期できる君",
   description:
-    "Google スライドの URL を入力してスライドを共有、スライド送りも同期できます",
+    "Google スライドの URL を入力してスライドを共有、スライド送りも同期できます。",
 };
 
 export default function RootLayout({
@@ -23,7 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="ja">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         {children}
       </body>
