@@ -4,7 +4,7 @@
 
 名前：Google スライドのスライド送りを簡単に複数端末で同期できる君
 
-URL：https://ohmoriyusuke.github.io/deno-websocket-app/
+URL：https://sync-google-slide.vercel.app/
 
 Google スライドの URL を入力してスライドを共有、スライド送りも同期できます
 
