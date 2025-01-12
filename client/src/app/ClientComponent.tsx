@@ -180,8 +180,8 @@ export const ClientComponent = () => {
             color="textSecondary"
             sx={{ marginBottom: 2, marginTop: 0 }}
           >
-            Google Slides の「ファイル」`{">"}`「共有」`{">"}`「ウェブに公開」`
-            {">"}`「リンク」からスライド公開用のURLを取得し入力してください。
+            Google Slides の「ファイル」{">"}「共有」{">"}「ウェブに公開」
+            {">"}「リンク」からスライド公開用のURLを取得し入力してください。
           </Typography>
           <Button
             variant="contained"
