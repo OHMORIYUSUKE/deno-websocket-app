@@ -9,6 +9,9 @@ import {
   Snackbar,
   SnackbarCloseReason,
   Alert,
+  ListItemText,
+  ListItem,
+  List,
 } from "@mui/material";
 import FullscreenIcon from "@mui/icons-material/Fullscreen";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
@@ -20,6 +23,11 @@ export const ClientComponent = () => {
     typeof window !== "undefined" && window.location.protocol === "https:"
       ? "wss://"
       : "ws://";
+
+  const httpHost =
+    typeof window !== "undefined" && window.location.protocol === "https:"
+      ? "https://"
+      : "http://";
   const host =
     process.env.NODE_ENV === "development"
       ? "localhost"
@@ -32,12 +40,84 @@ export const ClientComponent = () => {
   const [isHost, setIsHost] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  const [userId, setUserId] = useState("");
+  const [slides, setSlides] = useState<
+    {
+      url: string;
+      title: string;
+      createdAt: string;
+    }[]
+  >([]);
+
   const searchParams = useSearchParams();
   const router = useRouter();
 
   const slideUrlFromUrl = searchParams.get("slideUrl") || null;
 
+  const createUser = async () => {
+    try {
+      const res = await fetch(`${httpHost}${host}:${port}/user/create`, {
+        method: "GET",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const newUserId = data.userId;
+        localStorage.setItem("slide_sync_userId", newUserId);
+        setUserId(() => newUserId);
+      } else {
+        console.error("ユーザー作成失敗");
+      }
+    } catch (error) {
+      console.error("ユーザー作成エラー:", error);
+    }
+  };
+
+  const getSlides = async (userId: string) => {
+    try {
+      const res = await fetch(
+        `${httpHost}${host}:${port}/user/${userId}/slides`,
+        {
+          method: "GET",
+        }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setSlides(data.slides);
+      } else {
+        console.error("取得エラー");
+      }
+    } catch (error) {
+      console.error("取得エラー:", error);
+    }
+  };
+
+  const handlePostSlideUrl = async () => {
+    if (userId && slideUrl) {
+      const res = await fetch(`${httpHost}${host}:${port}/slide/add`, {
+        method: "POST",
+        body: JSON.stringify({ userId, slide: slideUrl }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      if (res.ok) {
+        // fetchUserSlides(userId); // 投稿後にスライド一覧を更新
+      } else {
+        console.error("スライドURLの投稿失敗");
+      }
+    }
+  };
+
   useEffect(() => {
+    const userIdFromLocalStorage = localStorage.getItem("slide_sync_userId");
+    if (!userIdFromLocalStorage) {
+      // create user
+      createUser();
+    } else {
+      // exist user
+      setUserId(() => userIdFromLocalStorage);
+      getSlides(userIdFromLocalStorage);
+    }
     if (typeof window !== "undefined" && slideUrlFromUrl) {
       setupWebSocket(slideUrlFromUrl);
       if (localStorage.getItem("slide_sync_slideUrl") !== slideUrlFromUrl) {
@@ -46,7 +126,7 @@ export const ClientComponent = () => {
         setIsHost(true);
       }
     }
-  }, [slideUrlFromUrl]);
+  }, [slideUrlFromUrl, userId]);
 
   // キーボード操作でスライドを前後に切り替え
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -66,6 +146,9 @@ export const ClientComponent = () => {
   };
 
   const handleStartPresentation = () => {
+    // スライドを登録
+    handlePostSlideUrl();
+
     const slideUrlInput = slideUrl.trim();
     if (slideUrlInput) {
       const slideUrl = replacePubWithEmbed(slideUrlInput);
@@ -175,6 +258,7 @@ export const ClientComponent = () => {
             padding: 3,
             textAlign: "center",
             margin: 0,
+            gap: 3,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -208,6 +292,25 @@ export const ClientComponent = () => {
               プレゼンテーション開始
             </Button>
           </div>
+          <List sx={{ width: "70%", margin: "0 auto" }}>
+            {slides.length > 0 && (
+              <ListItem sx={{ display: "flex", justifyContent: "center" }}>
+                発表したスライド
+              </ListItem>
+            )}
+            {slides.map((slide, index) => (
+              <ListItem key={index}>
+                <ListItemText
+                  primary={
+                    slide.title +
+                    " " +
+                    new Date(slide.createdAt).toLocaleString()
+                  }
+                  secondary={slide.url}
+                />
+              </ListItem>
+            ))}
+          </List>
         </Paper>
       ) : (
         <Paper
