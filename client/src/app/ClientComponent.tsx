@@ -407,8 +407,10 @@ export const ClientComponent = () => {
                 <ListItemText
                   primary={
                     <>
-                      <span style={{ fontSize: "large" }}>{slide.title}</span>
-                      <span style={{ fontSize: "small" }}>
+                      <span style={{ fontSize: "large", marginRight: "0.8em" }}>
+                        {slide.title}
+                      </span>
+                      <span style={{ fontSize: "small", color: "dimgray" }}>
                         {new Date(slide.createdAt).toLocaleString()}
                       </span>
                     </>
