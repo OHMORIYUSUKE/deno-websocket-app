@@ -51,8 +51,23 @@ export const ClientComponent = () => {
 
   const searchParams = useSearchParams();
   const router = useRouter();
+  const slideId = searchParams.get("slideId") || null;
+  const hostUserId = searchParams.get("hostUserId") || null;
 
-  const slideUrlFromUrl = searchParams.get("slideUrl") || null;
+  // google slideのURLからクエリパラメータを削除
+  function removeQueryParams(url: string): string {
+    // URL を URL オブジェクトに変換
+    const urlObj = new URL(url);
+
+    // 削除したいクエリパラメータをリストとして指定
+    const paramsToRemove = ["start", "loop", "delayms"];
+
+    // クエリパラメータを一つずつチェックして削除
+    paramsToRemove.forEach((param) => urlObj.searchParams.delete(param));
+
+    // 修正した URL を文字列として返す
+    return urlObj.toString();
+  }
 
   const createUser = async () => {
     try {
@@ -84,26 +99,94 @@ export const ClientComponent = () => {
         const data = await res.json();
         setSlides(data.slides);
       } else {
-        console.error("取得エラー");
+        console.log("取得エラー");
       }
     } catch (error) {
-      console.error("取得エラー:", error);
+      console.log("取得エラー:", error);
+    }
+  };
+
+  const getSlideIdByUserIdAndSlideUrl = async (
+    userId: string,
+    slideUrl: string
+  ): Promise<{ slideUrl: string; slideId: string } | void> => {
+    try {
+      const res = await fetch(
+        `${httpHost}${host}:${port}/slide?userId=${userId}&slideUrl=${slideUrl}`,
+        {
+          method: "GET",
+        }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        return data as { slideUrl: string; slideId: string };
+      } else {
+        console.log("取得エラー");
+      }
+    } catch (error) {
+      console.log("取得エラー:", error);
+    }
+  };
+
+  const getSlideByUserIdAndSlideId = async (
+    userId: string,
+    slideId: string
+  ) => {
+    // 視聴者がURLパラメータからスライドを取得する
+    if (hostUserId !== userId && hostUserId) {
+      userId = hostUserId;
+      console.log(userId);
+      try {
+        const res = await fetch(
+          `${httpHost}${host}:${port}/user/${userId}/slide/${slideId}`,
+          {
+            method: "GET",
+          }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          console.log(data);
+          if (!data.url) {
+            window.alert(
+              "スライドを取得できませんでした。再度URLを入力してください。"
+            );
+            router.push("/");
+            return;
+          }
+          setSlideUrl(data.url);
+        } else {
+          console.log("取得エラー");
+        }
+      } catch (error) {
+        console.log("取得エラー:", error);
+      }
     }
   };
 
   const handlePostSlideUrl = async () => {
     if (userId && slideUrl) {
-      const res = await fetch(`${httpHost}${host}:${port}/slide/add`, {
-        method: "POST",
-        body: JSON.stringify({ userId, slide: slideUrl }),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      if (res.ok) {
-        // fetchUserSlides(userId); // 投稿後にスライド一覧を更新
-      } else {
-        console.error("スライドURLの投稿失敗");
+      try {
+        const res = await fetch(`${httpHost}${host}:${port}/slide/add`, {
+          method: "POST",
+          body: JSON.stringify({ userId, slide: slideUrl }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        if (res.ok) {
+          // 投稿成功時の処理
+          console.log("スライドURLが正常に投稿されました");
+        } else {
+          if (res.status === 409) {
+            console.log(
+              "スライドURLの投稿に失敗しました。既に登録されています。"
+            );
+          } else {
+            console.log("スライドURLの投稿失敗");
+          }
+        }
+      } catch (error) {
+        console.log("ネットワークエラーが発生しました", error);
       }
     }
   };
@@ -118,15 +201,18 @@ export const ClientComponent = () => {
       setUserId(() => userIdFromLocalStorage);
       getSlides(userIdFromLocalStorage);
     }
-    if (typeof window !== "undefined" && slideUrlFromUrl) {
-      setupWebSocket(slideUrlFromUrl);
-      if (localStorage.getItem("slide_sync_slideUrl") !== slideUrlFromUrl) {
+    if (typeof window !== "undefined" && slideId) {
+      setupWebSocket(slideId);
+      if (localStorage.getItem("slide_sync_userId") !== hostUserId) {
         setIsHost(false);
       } else {
         setIsHost(true);
       }
     }
-  }, [slideUrlFromUrl, userId]);
+    if (slideId) {
+      getSlideByUserIdAndSlideId(userId, slideId);
+    }
+  }, [slideId, userId]);
 
   // キーボード操作でスライドを前後に切り替え
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -137,35 +223,36 @@ export const ClientComponent = () => {
     }
   };
 
-  const replacePubWithEmbed = (url: string) => {
-    const urlObj = new URL(url);
-    if (urlObj.pathname.endsWith("/pub")) {
-      urlObj.pathname = urlObj.pathname.replace("/pub", "/embed");
-    }
-    return urlObj.toString();
-  };
-
-  const handleStartPresentation = () => {
+  const handleStartPresentation = async () => {
     // スライドを登録
-    handlePostSlideUrl();
+    await handlePostSlideUrl();
+
+    // スライドのIDを取得
+    const slide = await getSlideIdByUserIdAndSlideUrl(userId, slideUrl);
+    const slideId = slide?.slideId;
 
     const slideUrlInput = slideUrl.trim();
     if (slideUrlInput) {
-      const slideUrl = replacePubWithEmbed(slideUrlInput);
-      const presentationRoomUrl = `${
-        window.location.origin
-      }/?slideUrl=${encodeURIComponent(slideUrl)}`;
-      localStorage.setItem("slide_sync_slideUrl", slideUrl);
-      router.push(presentationRoomUrl);
+      if (!slideId) {
+        window.alert("サーバーで問題が発生しました" + slide?.slideId);
+      } else {
+        console.log(slideId);
+        const presentationRoomUrl = `${
+          window.location.origin
+        }/?slideId=${encodeURIComponent(
+          slideId
+        )}&hostUserId=${encodeURIComponent(userId)}`;
+        router.push(presentationRoomUrl);
+      }
     } else {
       alert("URLを入力してください。");
     }
   };
 
-  const setupWebSocket = (slideUrl: string) => {
-    const socketUrl = `${protocol}${host}:${port}/?slideUrl=${encodeURIComponent(
-      slideUrl
-    )}`;
+  const setupWebSocket = (slideId: string) => {
+    const socketUrl = `${protocol}${host}:${port}/ws/?slideId=${encodeURIComponent(
+      slideId
+    )}&hostUserId=${hostUserId}`;
     const newSocket = new WebSocket(socketUrl);
     setSocket(newSocket);
 
@@ -182,7 +269,7 @@ export const ClientComponent = () => {
     };
 
     newSocket.onerror = (error) => {
-      console.error("WebSocketエラー:", error);
+      console.log("WebSocketエラー:", error);
     };
 
     newSocket.onclose = () => {
@@ -252,7 +339,7 @@ export const ClientComponent = () => {
 
   return (
     <>
-      {!slideUrlFromUrl ? (
+      {!slideId ? (
         <Paper
           sx={{
             padding: 3,
@@ -265,14 +352,14 @@ export const ClientComponent = () => {
             height: "100vh",
           }}
         >
-          <div>
+          <div style={{ width: "50%", margin: "0 auto" }}>
             <TextField
               label="スライドURL"
               variant="outlined"
               fullWidth
               id="slideUrl"
               value={slideUrl}
-              onChange={(e) => setSlideUrl(e.target.value)}
+              onChange={(e) => setSlideUrl(removeQueryParams(e.target.value))}
               placeholder="https://docs.google.com/presentation/d/e/.../pub?start=false&loop=false&delayms=3000"
               sx={{ marginBottom: 2 }}
             />
@@ -292,19 +379,31 @@ export const ClientComponent = () => {
               プレゼンテーション開始
             </Button>
           </div>
-          <List sx={{ width: "70%", margin: "0 auto" }}>
+          <List sx={{ width: "50%", margin: "0 auto" }}>
             {slides.length > 0 && (
               <ListItem sx={{ display: "flex", justifyContent: "center" }}>
-                発表したスライド
+                過去に発表したスライド
               </ListItem>
             )}
             {slides.map((slide, index) => (
-              <ListItem key={index}>
+              <ListItem
+                key={index}
+                onClick={() => setSlideUrl(slide.url)}
+                sx={{
+                  cursor: "pointer",
+                  "&:hover": {
+                    backgroundColor: "rgba(0, 0, 0, 0.1)", // グレーの背景色
+                  },
+                }}
+              >
                 <ListItemText
                   primary={
-                    slide.title +
-                    " " +
-                    new Date(slide.createdAt).toLocaleString()
+                    <>
+                      <span style={{ fontSize: "large" }}>{slide.title}</span>
+                      <span style={{ fontSize: "small" }}>
+                        {new Date(slide.createdAt).toLocaleString()}
+                      </span>
+                    </>
                   }
                   secondary={slide.url}
                 />
@@ -434,7 +533,10 @@ export const ClientComponent = () => {
           </Box>
           <iframe
             id="slideFrame"
-            src={`${slideUrlFromUrl}&slide=${currentSlide}`}
+            src={`${slideUrl.replace(
+              "pub",
+              "embed"
+            )}?start=false&slide=${currentSlide}`}
             style={{
               width: "100%",
               height: "100%",
