@@ -166,9 +166,12 @@ export const ClientComponent = () => {
   const handlePostSlideUrl = async () => {
     if (userId && slideUrl) {
       try {
+        console.log("handlePostSlideUrl");
+        console.log(removeQueryParams(slideUrl));
+
         const res = await fetch(`${httpHost}${host}:${port}/slide/add`, {
           method: "POST",
-          body: JSON.stringify({ userId, slide: slideUrl }),
+          body: JSON.stringify({ userId, slide: removeQueryParams(slideUrl) }),
           headers: {
             "Content-Type": "application/json",
           },
@@ -228,13 +231,18 @@ export const ClientComponent = () => {
     await handlePostSlideUrl();
 
     // スライドのIDを取得
-    const slide = await getSlideIdByUserIdAndSlideUrl(userId, slideUrl);
+    const slide = await getSlideIdByUserIdAndSlideUrl(
+      userId,
+      removeQueryParams(slideUrl)
+    );
+    console.log({ slide });
     const slideId = slide?.slideId;
 
     const slideUrlInput = slideUrl.trim();
+    console.log(slideUrlInput);
     if (slideUrlInput) {
       if (!slideId) {
-        window.alert("サーバーで問題が発生しました" + slide?.slideId);
+        window.alert("サーバーで問題が発生しました");
       } else {
         console.log(slideId);
         const presentationRoomUrl = `${
@@ -359,7 +367,7 @@ export const ClientComponent = () => {
               fullWidth
               id="slideUrl"
               value={slideUrl}
-              onChange={(e) => setSlideUrl(removeQueryParams(e.target.value))}
+              onChange={(e) => setSlideUrl(e.target.value)}
               placeholder="https://docs.google.com/presentation/d/e/.../pub?start=false&loop=false&delayms=3000"
               sx={{ marginBottom: 2 }}
             />
@@ -533,7 +541,7 @@ export const ClientComponent = () => {
           </Box>
           <iframe
             id="slideFrame"
-            src={`${slideUrl.replace(
+            src={`${removeQueryParams(slideUrl).replace(
               "pub",
               "embed"
             )}?start=false&slide=${currentSlide}`}
