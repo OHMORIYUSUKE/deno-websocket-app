@@ -7,7 +7,6 @@ import {
   Typography,
   Paper,
   Snackbar,
-  SnackbarCloseReason,
   Alert,
   ListItemText,
   ListItem,
@@ -17,116 +16,34 @@ import FullscreenIcon from "@mui/icons-material/Fullscreen";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import ArrowForward from "@mui/icons-material/ArrowForward";
 import ArrowBack from "@mui/icons-material/ArrowBack";
+import { removeQueryParams } from "./utils/removeQueryParams";
+import { protocol, httpHost, host, port } from "./fetch/commonConstants";
+import { createUser } from "./fetch/createUser";
+import { getSlides } from "./fetch/getSlides";
+import { getSlideIdByUserIdAndSlideUrl } from "./fetch/getSlideIdByUserIdAndSlideUrl";
+import { Slide } from "./fetch/types";
+import { updateSlide } from "./websocket/updateSlide";
+import { handleNext, handlePrev } from "./actions/handleSlidePage";
+import { handleFullscreenByTagId } from "./actions/handleFullscreenByTagId";
+import {
+  handleCopiedSnackbarClose,
+  handleCopyUrl,
+} from "./actions/handleCopyUrl";
+import { handleKeyDown } from "./actions/handleKeyDown";
+import { handlePostSlideUrl } from "./fetch/handlePostSlideUrl";
 
 export const ClientComponent = () => {
-  const protocol =
-    typeof window !== "undefined" && window.location.protocol === "https:"
-      ? "wss://"
-      : "ws://";
-
-  const httpHost =
-    typeof window !== "undefined" && window.location.protocol === "https:"
-      ? "https://"
-      : "http://";
-  const host =
-    process.env.NODE_ENV === "development"
-      ? "localhost"
-      : process.env.NEXT_PUBLIC_WS_HOST;
-  const port = 443;
-
   const [slideUrl, setSlideUrl] = useState("");
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [currentSlide, setCurrentSlide] = useState(1);
   const [isHost, setIsHost] = useState(false);
   const [copied, setCopied] = useState(false);
-
   const [userId, setUserId] = useState("");
-  const [slides, setSlides] = useState<
-    {
-      url: string;
-      title: string;
-      createdAt: string;
-    }[]
-  >([]);
-
+  const [slides, setSlides] = useState<Slide[]>([]);
   const searchParams = useSearchParams();
   const router = useRouter();
   const slideId = searchParams.get("slideId") || null;
   const hostUserId = searchParams.get("hostUserId") || null;
-
-  // google slideのURLからクエリパラメータを削除
-  function removeQueryParams(url: string): string {
-    // URL を URL オブジェクトに変換
-    const urlObj = new URL(url);
-
-    // 削除したいクエリパラメータをリストとして指定
-    const paramsToRemove = ["start", "loop", "delayms"];
-
-    // クエリパラメータを一つずつチェックして削除
-    paramsToRemove.forEach((param) => urlObj.searchParams.delete(param));
-
-    // 修正した URL を文字列として返す
-    return urlObj.toString();
-  }
-
-  const createUser = async () => {
-    try {
-      const res = await fetch(`${httpHost}${host}:${port}/user/create`, {
-        method: "GET",
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const newUserId = data.userId;
-        localStorage.setItem("slide_sync_userId", newUserId);
-        setUserId(() => newUserId);
-      } else {
-        console.error("ユーザー作成失敗");
-      }
-    } catch (error) {
-      console.error("ユーザー作成エラー:", error);
-    }
-  };
-
-  const getSlides = async (userId: string) => {
-    try {
-      const res = await fetch(
-        `${httpHost}${host}:${port}/user/${userId}/slides`,
-        {
-          method: "GET",
-        }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setSlides(data.slides);
-      } else {
-        console.log("取得エラー");
-      }
-    } catch (error) {
-      console.log("取得エラー:", error);
-    }
-  };
-
-  const getSlideIdByUserIdAndSlideUrl = async (
-    userId: string,
-    slideUrl: string
-  ): Promise<{ slideUrl: string; slideId: string } | void> => {
-    try {
-      const res = await fetch(
-        `${httpHost}${host}:${port}/slide?userId=${userId}&slideUrl=${slideUrl}`,
-        {
-          method: "GET",
-        }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        return data as { slideUrl: string; slideId: string };
-      } else {
-        console.log("取得エラー");
-      }
-    } catch (error) {
-      console.log("取得エラー:", error);
-    }
-  };
 
   const getSlideByUserIdAndSlideId = async (
     userId: string,
@@ -135,7 +52,6 @@ export const ClientComponent = () => {
     // 視聴者がURLパラメータからスライドを取得する
     if (hostUserId !== userId && hostUserId) {
       userId = hostUserId;
-      console.log(userId);
       try {
         const res = await fetch(
           `${httpHost}${host}:${port}/user/${userId}/slide/${slideId}`,
@@ -163,79 +79,55 @@ export const ClientComponent = () => {
     }
   };
 
-  const handlePostSlideUrl = async () => {
-    if (userId && slideUrl) {
-      try {
-        console.log("handlePostSlideUrl");
-        console.log(removeQueryParams(slideUrl));
-
-        const res = await fetch(`${httpHost}${host}:${port}/slide/add`, {
-          method: "POST",
-          body: JSON.stringify({ userId, slide: removeQueryParams(slideUrl) }),
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        if (res.ok) {
-          // 投稿成功時の処理
-          console.log("スライドURLが正常に投稿されました");
-        } else {
-          if (res.status === 409) {
-            console.log(
-              "スライドURLの投稿に失敗しました。既に登録されています。"
-            );
-          } else {
-            console.log("スライドURLの投稿失敗");
-          }
-        }
-      } catch (error) {
-        console.log("ネットワークエラーが発生しました", error);
-      }
-    }
-  };
-
   useEffect(() => {
-    const userIdFromLocalStorage = localStorage.getItem("slide_sync_userId");
-    if (!userIdFromLocalStorage) {
-      // create user
-      createUser();
-    } else {
-      // exist user
-      setUserId(() => userIdFromLocalStorage);
-      getSlides(userIdFromLocalStorage);
-    }
-    if (typeof window !== "undefined" && slideId) {
-      setupWebSocket(slideId);
-      if (localStorage.getItem("slide_sync_userId") !== hostUserId) {
-        setIsHost(false);
+    const initialize = async () => {
+      const userIdFromLocalStorage = localStorage.getItem("slide_sync_userId");
+      if (!userIdFromLocalStorage) {
+        // ユーザーを作成
+        const newUser = await createUser();
+        if (!newUser) {
+          window.alert("問題が発生しました。");
+        } else {
+          localStorage.setItem("slide_sync_userId", newUser.userId);
+          setUserId(() => newUser.userId);
+        }
       } else {
-        setIsHost(true);
+        // 既存のユーザー
+        setUserId(() => userIdFromLocalStorage);
+        const slides = await getSlides(userIdFromLocalStorage);
+        if (slides) {
+          setSlides(slides);
+        } else {
+          setSlides([]);
+        }
       }
-    }
-    if (slideId) {
-      getSlideByUserIdAndSlideId(userId, slideId);
-    }
-  }, [slideId, userId]);
 
-  // キーボード操作でスライドを前後に切り替え
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "ArrowLeft" && currentSlide > 1) {
-      handlePrev();
-    } else if (event.key === "ArrowRight") {
-      handleNext();
-    }
-  };
+      if (typeof window !== "undefined" && slideId) {
+        setupWebSocket(slideId);
+        if (localStorage.getItem("slide_sync_userId") !== hostUserId) {
+          setIsHost(false);
+        } else {
+          setIsHost(true);
+        }
+      }
+
+      if (slideId) {
+        await getSlideByUserIdAndSlideId(userId, slideId);
+      }
+    };
+
+    initialize();
+  }, [slideId, userId]);
 
   const handleStartPresentation = async () => {
     // スライドを登録
-    await handlePostSlideUrl();
+    await handlePostSlideUrl(userId, slideUrl);
 
     // スライドのIDを取得
     const slide = await getSlideIdByUserIdAndSlideUrl(
       userId,
       removeQueryParams(slideUrl)
     );
-    console.log({ slide });
     const slideId = slide?.slideId;
 
     const slideUrlInput = slideUrl.trim();
@@ -244,7 +136,6 @@ export const ClientComponent = () => {
       if (!slideId) {
         window.alert("サーバーで問題が発生しました");
       } else {
-        console.log(slideId);
         const presentationRoomUrl = `${
           window.location.origin
         }/?slideId=${encodeURIComponent(
@@ -283,66 +174,6 @@ export const ClientComponent = () => {
     newSocket.onclose = () => {
       console.log("WebSocket接続終了");
     };
-  };
-
-  const updateSlide = (currentSlide: number) => {
-    if (socket) {
-      socket.send(JSON.stringify({ action: "slide", slide: currentSlide }));
-    }
-  };
-
-  const handlePrev = () => {
-    setCurrentSlide((prevSlide) => {
-      const newSlide = Math.max(prevSlide - 1, 1);
-      updateSlide(newSlide); // スライド更新を即座に送信
-      return newSlide;
-    });
-  };
-
-  const handleNext = () => {
-    setCurrentSlide((prevSlide) => {
-      const newSlide = prevSlide + 1;
-      updateSlide(newSlide); // スライド更新を即座に送信
-      return newSlide;
-    });
-  };
-
-  interface HTMLIFrameElementWithFullscreen extends HTMLIFrameElement {
-    webkitRequestFullscreen?: () => void;
-    msRequestFullscreen?: () => void;
-  }
-
-  const handleFullscreen = () => {
-    const iframe = document.getElementById(
-      "slideFrame"
-    ) as HTMLIFrameElementWithFullscreen;
-
-    if (iframe.requestFullscreen) {
-      iframe.requestFullscreen();
-    } else if (iframe.webkitRequestFullscreen) {
-      iframe.webkitRequestFullscreen();
-    } else if (iframe.msRequestFullscreen) {
-      iframe.msRequestFullscreen();
-    }
-  };
-
-  const handleCopyUrl = async () => {
-    try {
-      await navigator.clipboard.writeText(location.href);
-      setCopied(true);
-    } catch (err) {
-      console.error("URLのコピーに失敗しました: ", err);
-    }
-  };
-
-  const handleCopiedSnackbarClose = (
-    event: React.SyntheticEvent | Event,
-    reason?: SnackbarCloseReason
-  ) => {
-    if (reason === "clickaway") {
-      return;
-    }
-    setCopied(false);
   };
 
   return (
@@ -423,7 +254,19 @@ export const ClientComponent = () => {
         </Paper>
       ) : (
         <Paper
-          {...(isHost && { tabIndex: 0, onKeyDown: handleKeyDown })}
+          {...(isHost && {
+            tabIndex: 0,
+            onKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) =>
+              handleKeyDown(
+                socket,
+                updateSlide,
+                currentSlide,
+                setCurrentSlide,
+                event,
+                handlePrev,
+                handleNext
+              ),
+          })}
           sx={{
             padding: 1,
             display: "flex",
@@ -469,7 +312,9 @@ export const ClientComponent = () => {
               >
                 <Button
                   variant="contained"
-                  onClick={handlePrev}
+                  onClick={() =>
+                    handlePrev(socket, setCurrentSlide, updateSlide)
+                  }
                   startIcon={<ArrowBack />}
                   sx={{ width: "15em", height: "3.5em" }} // 横幅を指定
                 >
@@ -477,7 +322,9 @@ export const ClientComponent = () => {
                 </Button>
                 <Button
                   variant="contained"
-                  onClick={handleNext}
+                  onClick={() =>
+                    handleNext(socket, setCurrentSlide, updateSlide)
+                  }
                   endIcon={<ArrowForward />}
                   sx={{ width: "15em" }} // 横幅を指定
                 >
@@ -501,7 +348,7 @@ export const ClientComponent = () => {
                 variant="outlined"
                 color="primary"
                 startIcon={<FullscreenIcon />}
-                onClick={handleFullscreen}
+                onClick={() => handleFullscreenByTagId("slideFrame")}
               >
                 スライドをフルスクリーンで表示
               </Button>
@@ -511,14 +358,17 @@ export const ClientComponent = () => {
                   variant="outlined"
                   color="secondary"
                   startIcon={<ContentCopyIcon />}
-                  onClick={handleCopyUrl}
+                  onClick={async () => {
+                    const result = await handleCopyUrl();
+                    if (result) setCopied(result);
+                  }}
                 >
                   このページのURLをコピー
                 </Button>
                 <Snackbar
                   open={copied}
                   autoHideDuration={2000}
-                  onClose={handleCopiedSnackbarClose}
+                  onClose={() => handleCopiedSnackbarClose(setCopied)}
                   anchorOrigin={{ vertical: "top", horizontal: "right" }}
                 >
                   <Alert
