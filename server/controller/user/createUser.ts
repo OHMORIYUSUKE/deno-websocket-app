@@ -3,10 +3,6 @@ import { kv } from "../../utils/kv.ts";
 import { corsHeaders } from "../utils/corsHeader.ts";
 
 export async function createUser(req: Request) {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
-  }
-
   if (req.method === "GET") {
     const userId = crypto.randomUUID();
 

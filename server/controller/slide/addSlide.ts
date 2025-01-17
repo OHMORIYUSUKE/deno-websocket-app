@@ -62,9 +62,5 @@ export async function addSlide(req: Request) {
     }
   }
 
-  if (req.method === "OPTIONS") {
-    return new Response("", { status: 204, headers: corsHeaders });
-  }
-
   return new Response("Not Found", { status: 404 });
 }

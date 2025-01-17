@@ -3,7 +3,7 @@ import { kv } from "../utils/kv.ts";
 
 const slideIds = new Map(); // WebSocket接続の管理用
 
-export function handleWebSocket(
+export function handleWebsocket(
   socket: WebSocket,
   slideId: string,
   userId: string

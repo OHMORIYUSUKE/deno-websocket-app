@@ -18,10 +18,6 @@ export async function getUserSlides(req: Request, userId: string) {
     });
   }
 
-  if (req.method === "OPTIONS") {
-    return new Response("", { status: 204, headers: corsHeaders });
-  }
-
   return new Response("Not Found", {
     status: 404,
     headers: corsHeaders,

@@ -17,10 +17,8 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import ArrowForward from "@mui/icons-material/ArrowForward";
 import ArrowBack from "@mui/icons-material/ArrowBack";
 import { removeQueryParams } from "./utils/removeQueryParams";
-import { protocol, httpHost, host, port } from "./fetch/commonConstants";
 import { createUser } from "./fetch/createUser";
 import { getSlides } from "./fetch/getSlides";
-import { getSlideIdByUserIdAndSlideUrl } from "./fetch/getSlideIdByUserIdAndSlideUrl";
 import { Slide } from "./fetch/types";
 import { updateSlide } from "./websocket/updateSlide";
 import { handleNext, handlePrev } from "./actions/handleSlidePage";
@@ -30,7 +28,9 @@ import {
   handleCopyUrl,
 } from "./actions/handleCopyUrl";
 import { handleKeyDown } from "./actions/handleKeyDown";
-import { handlePostSlideUrl } from "./fetch/handlePostSlideUrl";
+import { getSlideByUserIdAndSlideId } from "./fetch/getSlideByUserIdAndSlideId";
+import { handleStartPresentation } from "./actions/handleStartPresentation";
+import { setupWebSocket } from "./websocket/setupWebSocket";
 
 export const ClientComponent = () => {
   const [slideUrl, setSlideUrl] = useState("");
@@ -44,40 +44,6 @@ export const ClientComponent = () => {
   const router = useRouter();
   const slideId = searchParams.get("slideId") || null;
   const hostUserId = searchParams.get("hostUserId") || null;
-
-  const getSlideByUserIdAndSlideId = async (
-    userId: string,
-    slideId: string
-  ) => {
-    // 視聴者がURLパラメータからスライドを取得する
-    if (hostUserId !== userId && hostUserId) {
-      userId = hostUserId;
-      try {
-        const res = await fetch(
-          `${httpHost}${host}:${port}/user/${userId}/slide/${slideId}`,
-          {
-            method: "GET",
-          }
-        );
-        if (res.ok) {
-          const data = await res.json();
-          console.log(data);
-          if (!data.url) {
-            window.alert(
-              "スライドを取得できませんでした。再度URLを入力してください。"
-            );
-            router.push("/");
-            return;
-          }
-          setSlideUrl(data.url);
-        } else {
-          console.log("取得エラー");
-        }
-      } catch (error) {
-        console.log("取得エラー:", error);
-      }
-    }
-  };
 
   useEffect(() => {
     const initialize = async () => {
@@ -94,6 +60,7 @@ export const ClientComponent = () => {
       } else {
         // 既存のユーザー
         setUserId(() => userIdFromLocalStorage);
+        // ユーザーが発表したスライド情報を取得
         const slides = await getSlides(userIdFromLocalStorage);
         if (slides) {
           setSlides(slides);
@@ -102,79 +69,31 @@ export const ClientComponent = () => {
         }
       }
 
-      if (typeof window !== "undefined" && slideId) {
-        setupWebSocket(slideId);
+      // スライドの所有者であればsetIsHostをtrue
+      // ローカルストレージに保存されているslide_sync_userIdとURLパラメータのhostUserIdが一致していれば所有者
+      if (typeof window !== "undefined" && slideId && hostUserId) {
+        setupWebSocket(slideId, hostUserId, setCurrentSlide, setSocket);
         if (localStorage.getItem("slide_sync_userId") !== hostUserId) {
           setIsHost(false);
         } else {
           setIsHost(true);
         }
       }
-
-      if (slideId) {
-        await getSlideByUserIdAndSlideId(userId, slideId);
+      if (userId && slideId && hostUserId) {
+        const slideUrl = await getSlideByUserIdAndSlideId(hostUserId, slideId);
+        if (slideUrl) {
+          setSlideUrl(slideUrl);
+        } else {
+          window.alert(
+            "スライドを取得できませんでした。再度URLを入力してください。\nまたは、発表者から新しいURLを発行を依頼してください。"
+          );
+          router.push("/");
+        }
       }
     };
 
     initialize();
-  }, [slideId, userId]);
-
-  const handleStartPresentation = async () => {
-    // スライドを登録
-    await handlePostSlideUrl(userId, slideUrl);
-
-    // スライドのIDを取得
-    const slide = await getSlideIdByUserIdAndSlideUrl(
-      userId,
-      removeQueryParams(slideUrl)
-    );
-    const slideId = slide?.slideId;
-
-    const slideUrlInput = slideUrl.trim();
-    console.log(slideUrlInput);
-    if (slideUrlInput) {
-      if (!slideId) {
-        window.alert("サーバーで問題が発生しました");
-      } else {
-        const presentationRoomUrl = `${
-          window.location.origin
-        }/?slideId=${encodeURIComponent(
-          slideId
-        )}&hostUserId=${encodeURIComponent(userId)}`;
-        router.push(presentationRoomUrl);
-      }
-    } else {
-      alert("URLを入力してください。");
-    }
-  };
-
-  const setupWebSocket = (slideId: string) => {
-    const socketUrl = `${protocol}${host}:${port}/ws/?slideId=${encodeURIComponent(
-      slideId
-    )}&hostUserId=${hostUserId}`;
-    const newSocket = new WebSocket(socketUrl);
-    setSocket(newSocket);
-
-    newSocket.onopen = () => {
-      console.log("WebSocket接続中...");
-    };
-
-    newSocket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.action === "slide") {
-        const pageNumber = data.slide;
-        setCurrentSlide(pageNumber);
-      }
-    };
-
-    newSocket.onerror = (error) => {
-      console.log("WebSocketエラー:", error);
-    };
-
-    newSocket.onclose = () => {
-      console.log("WebSocket接続終了");
-    };
-  };
+  }, [slideId, userId, hostUserId]);
 
   return (
     <>
@@ -213,7 +132,7 @@ export const ClientComponent = () => {
             <Button
               variant="contained"
               color="primary"
-              onClick={handleStartPresentation}
+              onClick={() => handleStartPresentation(slideUrl, userId, router)}
             >
               プレゼンテーション開始
             </Button>
