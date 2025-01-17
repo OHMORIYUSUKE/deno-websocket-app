@@ -2,9 +2,12 @@
 
 import dynamic from "next/dynamic";
 
-const ClientComponent = dynamic(() => import("./ClientComponent").then((mod) => mod.ClientComponent), {
-  ssr: false,
-});
+const ClientComponent = dynamic(
+  () => import("./ClientComponent").then((mod) => mod.ClientComponent),
+  {
+    ssr: false,
+  }
+);
 
 const Page = () => {
   return (

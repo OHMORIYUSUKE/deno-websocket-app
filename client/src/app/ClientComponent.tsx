@@ -1,36 +1,22 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import {
-  Button,
-  TextField,
-  Box,
-  Typography,
-  Paper,
-  Snackbar,
-  Alert,
-  ListItemText,
-  ListItem,
-  List,
-} from "@mui/material";
-import FullscreenIcon from "@mui/icons-material/Fullscreen";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import ArrowForward from "@mui/icons-material/ArrowForward";
-import ArrowBack from "@mui/icons-material/ArrowBack";
-import { removeQueryParams } from "./utils/removeQueryParams";
+import { Box, Paper } from "@mui/material";
 import { createUser } from "./fetch/createUser";
 import { getSlides } from "./fetch/getSlides";
 import { Slide } from "./fetch/types";
 import { updateSlide } from "./websocket/updateSlide";
 import { handleNext, handlePrev } from "./actions/handleSlidePage";
-import { handleFullscreenByTagId } from "./actions/handleFullscreenByTagId";
-import {
-  handleCopiedSnackbarClose,
-  handleCopyUrl,
-} from "./actions/handleCopyUrl";
 import { handleKeyDown } from "./actions/handleKeyDown";
 import { getSlideByUserIdAndSlideId } from "./fetch/getSlideByUserIdAndSlideId";
-import { handleStartPresentation } from "./actions/handleStartPresentation";
 import { setupWebSocket } from "./websocket/setupWebSocket";
+import { SlideForm } from "./components/SlideForm";
+import { SlidesTable } from "./components/SlidesTable";
+import { GoogleSlide } from "./components/GoogleSlide";
+import { PresentationDescription } from "./components/PresentationDescription";
+import { SlideControlPanel } from "./components/SlideControlPanel";
+import { CopyURLButton } from "./components/CopyURLButton";
+import { FullscreenButton } from "./components/FullscreenButton";
+import { ToSlideFormButton } from "./components/ToSlideFormButton";
 
 export const ClientComponent = () => {
   const [slideUrl, setSlideUrl] = useState("");
@@ -85,7 +71,7 @@ export const ClientComponent = () => {
           setSlideUrl(slideUrl);
         } else {
           window.alert(
-            "スライドを取得できませんでした。再度URLを入力してください。\nまたは、発表者から新しいURLを発行を依頼してください。"
+            "スライドを取得できませんでした。再度URLを入力してください。\nまたは、発表者から新しいURLの発行を依頼してください。"
           );
           router.push("/");
         }
@@ -110,66 +96,14 @@ export const ClientComponent = () => {
             height: "100vh",
           }}
         >
-          <div style={{ width: "50%", margin: "0 auto" }}>
-            <TextField
-              label="スライドURL"
-              variant="outlined"
-              fullWidth
-              id="slideUrl"
-              value={slideUrl}
-              onChange={(e) => setSlideUrl(e.target.value)}
-              placeholder="https://docs.google.com/presentation/d/e/.../pub?start=false&loop=false&delayms=3000"
-              sx={{ marginBottom: 2 }}
-            />
-            <Typography
-              variant="body2"
-              color="textSecondary"
-              sx={{ marginBottom: 2, marginTop: 0 }}
-            >
-              Google Slides の「ファイル」{">"}「共有」{">"}「ウェブに公開」
-              {">"}「リンク」からスライド公開用のURLを取得し入力してください。
-            </Typography>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => handleStartPresentation(slideUrl, userId, router)}
-            >
-              プレゼンテーション開始
-            </Button>
-          </div>
-          <List sx={{ width: "50%", margin: "0 auto" }}>
-            {slides.length > 0 && (
-              <ListItem sx={{ display: "flex", justifyContent: "center" }}>
-                過去に発表したスライド
-              </ListItem>
-            )}
-            {slides.map((slide, index) => (
-              <ListItem
-                key={index}
-                onClick={() => setSlideUrl(slide.url)}
-                sx={{
-                  cursor: "pointer",
-                  "&:hover": {
-                    backgroundColor: "rgba(0, 0, 0, 0.1)", // グレーの背景色
-                  },
-                }}
-              >
-                <ListItemText
-                  primary={
-                    <>
-                      <span style={{ fontSize: "large", marginRight: "0.8em" }}>
-                        {slide.title}
-                      </span>
-                      <span style={{ fontSize: "small", color: "dimgray" }}>
-                        {new Date(slide.createdAt).toLocaleString()}
-                      </span>
-                    </>
-                  }
-                  secondary={slide.url}
-                />
-              </ListItem>
-            ))}
-          </List>
+          <SlideForm
+            slideUrl={slideUrl}
+            setSlideUrl={setSlideUrl}
+            slides={slides}
+            userId={userId}
+            router={router}
+          />
+          <SlidesTable slides={slides} setSlideUrl={setSlideUrl} />
         </Paper>
       ) : (
         <Paper
@@ -196,60 +130,14 @@ export const ClientComponent = () => {
           }}
         >
           <Box sx={{ textAlign: "center", flexShrink: 0 }}>
-            <Typography variant="h6" gutterBottom sx={{ marginTop: 0 }}>
-              {isHost ? "発表者へ" : "視聴者へ"}
-            </Typography>
-            {isHost ? (
-              <ul style={{ textAlign: "left" }}>
-                <li>
-                  このページのURLを共有すると表示されているスライドを視聴者に共有、スライド送りを視聴者の画面に同期させることができます。
-                </li>
-                <li>視聴者にこのページのURLを共有してください。</li>
-                <li>スライド内の動画などの再生は同期されません。</li>
-                <li>
-                  スライド外にカーソルを当てた状態でキーボードの左右の矢印キーでもスライド送りができます。
-                </li>
-                <li>
-                  「プレゼンテーション開始画面に戻る」から別なスライドを共有し直せます。
-                </li>
-              </ul>
-            ) : (
-              <ul style={{ textAlign: "left" }}>
-                <li>
-                  発表者のスライド送りと同期されているため、発表者と同じページが表示されます。
-                </li>
-              </ul>
-            )}
+            <PresentationDescription isHost={isHost} />
             {isHost && (
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "center",
-                  gap: 3,
-                  marginTop: 2,
-                }}
-              >
-                <Button
-                  variant="contained"
-                  onClick={() =>
-                    handlePrev(socket, setCurrentSlide, updateSlide)
-                  }
-                  startIcon={<ArrowBack />}
-                  sx={{ width: "15em", height: "3.5em" }} // 横幅を指定
-                >
-                  前のページ
-                </Button>
-                <Button
-                  variant="contained"
-                  onClick={() =>
-                    handleNext(socket, setCurrentSlide, updateSlide)
-                  }
-                  endIcon={<ArrowForward />}
-                  sx={{ width: "15em" }} // 横幅を指定
-                >
-                  次のページ
-                </Button>
-              </Box>
+              <SlideControlPanel
+                socket={socket}
+                currentSlide={currentSlide}
+                setCurrentSlide={setCurrentSlide}
+                updateSlide={updateSlide}
+              />
             )}
           </Box>
           <Box
@@ -263,67 +151,13 @@ export const ClientComponent = () => {
             }}
           >
             {!isHost ? (
-              <Button
-                variant="outlined"
-                color="primary"
-                startIcon={<FullscreenIcon />}
-                onClick={() => handleFullscreenByTagId("slideFrame")}
-              >
-                スライドをフルスクリーンで表示
-              </Button>
+              <FullscreenButton />
             ) : (
-              <>
-                <Button
-                  variant="outlined"
-                  color="secondary"
-                  startIcon={<ContentCopyIcon />}
-                  onClick={async () => {
-                    const result = await handleCopyUrl();
-                    if (result) setCopied(result);
-                  }}
-                >
-                  このページのURLをコピー
-                </Button>
-                <Snackbar
-                  open={copied}
-                  autoHideDuration={2000}
-                  onClose={() => handleCopiedSnackbarClose(setCopied)}
-                  anchorOrigin={{ vertical: "top", horizontal: "right" }}
-                >
-                  <Alert
-                    severity="success"
-                    variant="filled"
-                    sx={{ width: "100%" }}
-                  >
-                    コピーしました
-                  </Alert>
-                </Snackbar>
-              </>
+              <CopyURLButton setCopied={setCopied} copied={copied} />
             )}
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={() => router.push("/")}
-            >
-              {isHost
-                ? "プレゼンテーション開始画面に戻る"
-                : "あなたもプレゼンテーション開始する"}
-            </Button>
+            <ToSlideFormButton isHost={isHost} router={router} />
           </Box>
-          <iframe
-            id="slideFrame"
-            src={`${removeQueryParams(slideUrl).replace(
-              "pub",
-              "embed"
-            )}?start=false&slide=${currentSlide}`}
-            style={{
-              width: "100%",
-              height: "100%",
-              flexGrow: 1,
-              border: "none",
-            }}
-            allowFullScreen
-          />
+          <GoogleSlide slideUrl={slideUrl} currentSlide={currentSlide} />
         </Paper>
       )}
     </>
