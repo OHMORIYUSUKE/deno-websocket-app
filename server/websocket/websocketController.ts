@@ -1,4 +1,4 @@
-import { handleWebsocket } from "./handleWebsocket.ts";
+import { handleWebsocket } from "./handleWebSocket.ts";
 
 export function websocketController(url: URL, req: Request) {
   if (url.pathname.startsWith("/ws/")) {
