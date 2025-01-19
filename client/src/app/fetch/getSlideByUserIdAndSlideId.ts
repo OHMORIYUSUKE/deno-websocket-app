@@ -20,8 +20,8 @@ export const getSlideByUserIdAndSlideId = async (
     );
     if (res.ok) {
       const data = await res.json();
-      if (data.url) {
-        return data.url;
+      if (data.slide.url) {
+        return data.slide.url;
       }
     } else {
       console.log("取得エラー");

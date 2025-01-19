@@ -3,6 +3,7 @@ import { getUserSlides } from "./slide/getUserSlides.ts";
 import { getUserSlide } from "./slide/getUserSlide.ts";
 import { addSlide } from "./slide/addSlide.ts";
 import { getSlideBySlideUrlAndUserId } from "./slide/getSlideBySlideUrlAndUserId.ts";
+// import { getSlideById } from "./slide/getSlideById.ts";
 
 export async function restApiController(
   url: URL,
@@ -25,8 +26,7 @@ export async function restApiController(
     url.pathname.includes("/slide/")
   ) {
     const pathParts = url.pathname.split("/");
-    const userId = pathParts[2];
     const slideId = pathParts[4];
-    return await getUserSlide(req, userId, slideId);
+    return await getUserSlide(req, slideId);
   }
 }

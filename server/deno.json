@@ -1,5 +1,5 @@
 {
   "tasks": {
-    "dev": "deno run --watch server.ts"
+    "start": "deno run --unstable-kv --env --allow-env --allow-net --reload server.ts"
   }
 }

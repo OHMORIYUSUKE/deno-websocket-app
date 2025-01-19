@@ -14,7 +14,7 @@ Google スライドの URL を入力してスライドを共有、スライド�
 
 ```sh
 cd server
-deno run --unstable-kv --env --allow-env --allow-net server.ts
+deno run start
 ```
 
 フロントエンドのサーバーを起動

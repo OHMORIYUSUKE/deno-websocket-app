@@ -1,17 +1,9 @@
-import { Slide } from "../../types/slide.ts";
-import { kv } from "../../utils/kv.ts";
+import { getSlideById } from "../../repository/getSlideById.ts";
 import { corsHeaders } from "../utils/corsHeader.ts";
 
-export async function getUserSlide(
-  req: Request,
-  userId: string,
-  slideId: string
-) {
+export async function getUserSlide(req: Request, slideId: string) {
   if (req.method === "GET") {
-    const slide =
-      (await kv.get(["users", userId, "slides", slideId])).value ||
-      ({} as Slide);
-
+    const slide = await getSlideById(slideId);
     return new Response(JSON.stringify(slide), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
