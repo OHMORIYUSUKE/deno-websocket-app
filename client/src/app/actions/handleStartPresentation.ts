@@ -2,6 +2,7 @@ import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.share
 import { handlePostSlideUrl } from "../fetch/handlePostSlideUrl";
 import { getSlideIdByUserIdAndSlideUrl } from "../fetch/getSlideIdByUserIdAndSlideUrl";
 import { removeQueryParams } from "../utils/removeQueryParams";
+import { createUser } from "../fetch/createUser";
 
 /**
  * プレゼンを開始する
@@ -10,9 +11,25 @@ import { removeQueryParams } from "../utils/removeQueryParams";
  */
 export const handleStartPresentation = async (
   slideUrl: string,
-  userId: string,
   router: AppRouterInstance
 ) => {
+  // すでに発表してユーザー登録されているかどうか
+  let userId = "";
+  const userIdFromLocalStorage = localStorage.getItem("slide_sync_userId");
+  if (!userIdFromLocalStorage) {
+    // ユーザーを作成
+    const newUser = await createUser();
+    if (!newUser) {
+      window.alert("問題が発生しました。");
+    } else {
+      userId = newUser.userId;
+      localStorage.setItem("slide_sync_userId", newUser.userId);
+    }
+  } else {
+    // すでにユーザー作成済み
+    userId = userIdFromLocalStorage;
+  }
+
   // スライドを登録
   try {
     await handlePostSlideUrl(userId, slideUrl);

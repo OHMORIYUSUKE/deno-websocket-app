@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Box, Paper } from "@mui/material";
-import { createUser } from "./fetch/createUser";
 import { getSlides } from "./fetch/getSlides";
 import { Slide } from "./fetch/types";
 import { updateSlide } from "./websocket/updateSlide";
@@ -35,17 +34,9 @@ export const ClientComponent = () => {
   useEffect(() => {
     const initialize = async () => {
       const userIdFromLocalStorage = localStorage.getItem("slide_sync_userId");
-      if (!userIdFromLocalStorage) {
-        // ユーザーを作成
-        const newUser = await createUser();
-        if (!newUser) {
-          window.alert("問題が発生しました。");
-        } else {
-          localStorage.setItem("slide_sync_userId", newUser.userId);
-          setUserId(() => newUser.userId);
-        }
-      } else {
-        // 既存のユーザー
+      if (userIdFromLocalStorage) {
+        // 発表利用経験あり
+        // ユーザー作成済み
         setUserId(() => userIdFromLocalStorage);
         // ユーザーが発表したスライド情報を取得
         const slides = await getSlides(userIdFromLocalStorage);
@@ -66,7 +57,7 @@ export const ClientComponent = () => {
           setIsHost(true);
         }
       }
-      if (userId && slideId) {
+      if (slideId) {
         const slide = await getSlideById(slideId);
         if (slide) {
           setSlideUrl(slide.slide.url);
@@ -101,8 +92,6 @@ export const ClientComponent = () => {
           <SlideForm
             slideUrl={slideUrl}
             setSlideUrl={setSlideUrl}
-            slides={slides}
-            userId={userId}
             router={router}
           />
           <SlidesTable slides={slides} setSlideUrl={setSlideUrl} />
