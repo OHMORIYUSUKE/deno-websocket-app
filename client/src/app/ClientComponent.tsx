@@ -7,7 +7,7 @@ import { Slide } from "./fetch/types";
 import { updateSlide } from "./websocket/updateSlide";
 import { handleNext, handlePrev } from "./actions/handleSlidePage";
 import { handleKeyDown } from "./actions/handleKeyDown";
-import { getSlideByUserIdAndSlideId } from "./fetch/getSlideByUserIdAndSlideId";
+import { getSlideById } from "./fetch/getSlideById";
 import { setupWebSocket } from "./websocket/setupWebSocket";
 import { SlideForm } from "./components/SlideForm";
 import { SlidesTable } from "./components/SlidesTable";
@@ -29,7 +29,8 @@ export const ClientComponent = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const slideId = searchParams.get("slideId") || null;
-  const hostUserId = searchParams.get("hostUserId") || null;
+  // const hostUserId = searchParams.get("hostUserId") || null;
+  const [hostUserId, setHostUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const initialize = async () => {
@@ -65,10 +66,11 @@ export const ClientComponent = () => {
           setIsHost(true);
         }
       }
-      if (userId && slideId && hostUserId) {
-        const slideUrl = await getSlideByUserIdAndSlideId(hostUserId, slideId);
-        if (slideUrl) {
-          setSlideUrl(slideUrl);
+      if (userId && slideId) {
+        const slide = await getSlideById(slideId);
+        if (slide) {
+          setSlideUrl(slide.slide.url);
+          setHostUserId(slide.user.id);
         } else {
           window.alert(
             "スライドを取得できませんでした。再度URLを入力してください。\nまたは、発表者から新しいURLの発行を依頼してください。"

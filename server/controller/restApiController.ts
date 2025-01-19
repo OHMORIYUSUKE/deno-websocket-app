@@ -3,7 +3,6 @@ import { getUserSlides } from "./slide/getUserSlides.ts";
 import { getUserSlide } from "./slide/getUserSlide.ts";
 import { addSlide } from "./slide/addSlide.ts";
 import { getSlideBySlideUrlAndUserId } from "./slide/getSlideBySlideUrlAndUserId.ts";
-// import { getSlideById } from "./slide/getSlideById.ts";
 
 export async function restApiController(
   url: URL,
@@ -21,12 +20,9 @@ export async function restApiController(
   ) {
     const userId = url.pathname.split("/")[2];
     return await getUserSlides(req, userId);
-  } else if (
-    url.pathname.startsWith("/user/") &&
-    url.pathname.includes("/slide/")
-  ) {
+  } else if (url.pathname.startsWith("/slide/")) {
     const pathParts = url.pathname.split("/");
-    const slideId = pathParts[4];
+    const slideId = pathParts[2];
     return await getUserSlide(req, slideId);
   }
 }

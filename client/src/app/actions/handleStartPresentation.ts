@@ -36,9 +36,7 @@ export const handleStartPresentation = async (
       // プレゼンテーション画面に遷移する
       const presentationRoomUrl = `${
         window.location.origin
-      }/?slideId=${encodeURIComponent(slideId)}&hostUserId=${encodeURIComponent(
-        userId
-      )}`;
+      }/?slideId=${encodeURIComponent(slideId)}`;
       router.push(presentationRoomUrl);
     }
   }

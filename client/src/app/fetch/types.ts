@@ -3,3 +3,8 @@ export type Slide = {
   title: string;
   createdAt: string;
 };
+
+export type User = {
+  id: string;
+  createdAt: Date;
+};
