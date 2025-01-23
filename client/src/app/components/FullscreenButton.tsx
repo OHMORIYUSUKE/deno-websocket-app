@@ -5,7 +5,8 @@ import { handleFullscreenByTagId } from "../actions/handleFullscreenByTagId";
 export const FullscreenButton: React.FC = () => {
   return (
     <Button
-      variant="outlined"
+      disableElevation
+      variant="contained"
       color="primary"
       startIcon={<FullscreenIcon />}
       onClick={() => handleFullscreenByTagId("slideFrame")}

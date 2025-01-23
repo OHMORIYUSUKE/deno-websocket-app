@@ -23,8 +23,25 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html
+      lang="ja"
+      style={{
+        margin: 0,
+        padding: 0,
+        width: "100%",
+        height: "100%",
+        overflow: "hidden" /* ページ全体でスクロールを無効にする */,
+      }}
+    >
+      <body
+        className={`${geistSans.variable} ${geistMono.variable}`}
+        style={{
+          margin: 0,
+          padding: 0,
+          width: "100%",
+          height: "100%",
+        }}
+      >
         {children}
       </body>
     </html>

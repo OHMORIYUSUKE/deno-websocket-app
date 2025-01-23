@@ -11,14 +11,19 @@ import { setupWebSocket } from "./websocket/setupWebSocket";
 import { SlideForm } from "./components/SlideForm";
 import { SlidesTable } from "./components/SlidesTable";
 import { GoogleSlide } from "./components/GoogleSlide";
-import { PresentationDescription } from "./components/PresentationDescription";
 import { SlideControlPanel } from "./components/SlideControlPanel";
 import { CopyURLButton } from "./components/CopyURLButton";
 import { FullscreenButton } from "./components/FullscreenButton";
 import { ToSlideFormButton } from "./components/ToSlideFormButton";
+import { PresentationDescriptionDialog } from "./components/PresentationDescriptionDialog";
 
 export const ClientComponent = () => {
-  const [slideUrl, setSlideUrl] = useState("");
+  const [slide, setSlide] = useState({
+    id: "",
+    title: "",
+    url: "",
+    createdAt: "",
+  } as Slide);
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [currentSlide, setCurrentSlide] = useState(1);
   const [isHost, setIsHost] = useState(false);
@@ -28,7 +33,6 @@ export const ClientComponent = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const slideId = searchParams.get("slideId") || null;
-  // const hostUserId = searchParams.get("hostUserId") || null;
   const [hostUserId, setHostUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -60,7 +64,7 @@ export const ClientComponent = () => {
       if (slideId) {
         const slide = await getSlideById(slideId);
         if (slide) {
-          setSlideUrl(slide.slide.url);
+          setSlide(slide.slide);
           setHostUserId(slide.user.id);
         } else {
           window.alert(
@@ -72,7 +76,7 @@ export const ClientComponent = () => {
     };
 
     initialize();
-  }, [slideId, userId, hostUserId]);
+  }, [slideId, userId, hostUserId, router]);
 
   return (
     <>
@@ -85,19 +89,16 @@ export const ClientComponent = () => {
             gap: 3,
             display: "flex",
             alignItems: "center",
+            overflow: "hidden",
             justifyContent: "center",
             height: "100vh",
           }}
         >
-          <SlideForm
-            slideUrl={slideUrl}
-            setSlideUrl={setSlideUrl}
-            router={router}
-          />
-          <SlidesTable slides={slides} setSlideUrl={setSlideUrl} />
+          <SlideForm slideUrl={slide.url} setSlide={setSlide} router={router} />
+          <SlidesTable slides={slides} setSlide={setSlide} />
         </Paper>
       ) : (
-        <Paper
+        <Box
           {...(isHost && {
             tabIndex: 0,
             onKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) =>
@@ -112,44 +113,53 @@ export const ClientComponent = () => {
               ),
           })}
           sx={{
-            padding: 1,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            height: "calc(100vh)",
+            height: "100vh",
             overflow: "hidden",
+            position: "relative", // 子要素の絶対配置用
           }}
         >
-          <Box sx={{ textAlign: "center", flexShrink: 0 }}>
-            <PresentationDescription isHost={isHost} />
-            {isHost && (
+          <Box
+            sx={{
+              textAlign: "center",
+              flexShrink: 0,
+              gap: 3,
+              display: "flex",
+              marginY: "10px",
+            }}
+          >
+            {!isHost ? (
+              <FullscreenButton />
+            ) : (
+              <CopyURLButton
+                setCopied={setCopied}
+                copied={copied}
+                slide={slide}
+              />
+            )}
+            {isHost && <ToSlideFormButton router={router} />}
+            <PresentationDescriptionDialog isHost={isHost} />
+          </Box>
+
+          {/* スライドの表示エリア */}
+          <GoogleSlide slide={slide} currentSlide={currentSlide} />
+
+          {/* ナビゲーションバー */}
+
+          {/* スライド操作パネル */}
+          {isHost && (
+            <Box sx={{ textAlign: "center", flexShrink: 0, margin: "20px" }}>
               <SlideControlPanel
                 socket={socket}
                 currentSlide={currentSlide}
                 setCurrentSlide={setCurrentSlide}
                 updateSlide={updateSlide}
               />
-            )}
-          </Box>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              gap: 2,
-              marginTop: 2,
-              marginBottom: 2,
-              flexShrink: 0,
-            }}
-          >
-            {!isHost ? (
-              <FullscreenButton />
-            ) : (
-              <CopyURLButton setCopied={setCopied} copied={copied} />
-            )}
-            <ToSlideFormButton isHost={isHost} router={router} />
-          </Box>
-          <GoogleSlide slideUrl={slideUrl} currentSlide={currentSlide} />
-        </Paper>
+            </Box>
+          )}
+        </Box>
       )}
     </>
   );

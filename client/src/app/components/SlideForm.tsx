@@ -2,16 +2,17 @@ import { Button, TextField, Typography, CircularProgress } from "@mui/material";
 import { handleStartPresentation } from "../actions/handleStartPresentation";
 import { Dispatch, SetStateAction, useState } from "react";
 import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import { Slide } from "../fetch/types";
 
 type SlideFormProps = {
   slideUrl: string;
-  setSlideUrl: Dispatch<SetStateAction<string>>;
+  setSlide: Dispatch<SetStateAction<Slide>>;
   router: AppRouterInstance;
 };
 
 export const SlideForm: React.FC<SlideFormProps> = ({
   slideUrl,
-  setSlideUrl,
+  setSlide,
   router,
 }) => {
   const [loading, setLoading] = useState(false);
@@ -36,7 +37,9 @@ export const SlideForm: React.FC<SlideFormProps> = ({
           fullWidth
           id="slideUrl"
           value={slideUrl}
-          onChange={(e) => setSlideUrl(e.target.value)}
+          onChange={(e) =>
+            setSlide({ id: "", url: e.target.value, title: "", createdAt: "" })
+          }
           placeholder="https://docs.google.com/presentation/d/e/.../pub?start=false&loop=false&delayms=3000"
           sx={{ marginBottom: 2 }}
         />

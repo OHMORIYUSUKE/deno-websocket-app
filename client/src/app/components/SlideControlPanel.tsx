@@ -22,23 +22,38 @@ export const SlideControlPanel: React.FC<SlideControlPanelProps> = ({
         display: "flex",
         justifyContent: "center",
         gap: 3,
-        marginTop: 2,
+        flexWrap: "wrap", // 狭い画面でボタンが折り返し可能に
+        padding: { xs: "0.5em", sm: "1em" },
       }}
     >
       <Button
         variant="contained"
+        size="large"
+        disableElevation
         onClick={() => handlePrev(socket, setCurrentSlide, updateSlide)}
         startIcon={<ArrowBack />}
         disabled={currentSlide <= 1}
-        sx={{ width: "15em", height: "3.5em" }} // 横幅を指定
+        sx={{
+          fontSize: "1rem", // ボタンの文字サイズを一定化
+          padding: "0.7em 1.5em", // ボタンの内側の余白を固定
+          minWidth: "150px", // 最小幅を固定
+          maxWidth: "200px", // 最大幅を設定して横に伸びすぎないように
+        }}
       >
         前のページ
       </Button>
       <Button
         variant="contained"
+        size="large"
+        disableElevation
         onClick={() => handleNext(socket, setCurrentSlide, updateSlide)}
         endIcon={<ArrowForward />}
-        sx={{ width: "15em" }} // 横幅を指定
+        sx={{
+          fontSize: "1rem",
+          padding: "0.7em 1.5em",
+          minWidth: "150px", // 最小幅を固定
+          maxWidth: "200px",
+        }}
       >
         次のページ
       </Button>

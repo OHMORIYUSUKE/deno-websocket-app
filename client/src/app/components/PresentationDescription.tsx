@@ -1,5 +1,3 @@
-import { Typography } from "@mui/material";
-
 type PresentationDescriptionProps = {
   isHost: boolean;
 };
@@ -9,9 +7,6 @@ export const PresentationDescription: React.FC<
 > = ({ isHost }) => {
   return (
     <>
-      <Typography variant="h6" gutterBottom sx={{ marginTop: 0 }}>
-        {isHost ? "発表者へ" : "視聴者へ"}
-      </Typography>
       {isHost ? (
         <ul style={{ textAlign: "left" }}>
           <li>
@@ -19,6 +14,9 @@ export const PresentationDescription: React.FC<
           </li>
           <li>視聴者にこのページのURLを共有してください。</li>
           <li>スライド内の動画などの再生は同期されません。</li>
+          <li>
+            スライド下にあるボタンでスライド送りを行えます。スライド内のボタンを押してスライド送りを行うと同期されません。
+          </li>
           <li>
             スライド外にカーソルを当てた状態でキーボードの左右の矢印キーでもスライド送りができます。
           </li>

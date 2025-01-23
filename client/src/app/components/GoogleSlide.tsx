@@ -1,17 +1,18 @@
 import React from "react";
 import { Skeleton } from "@mui/material";
 import { removeQueryParams } from "../utils/removeQueryParams";
+import { Slide } from "../fetch/types";
 
 type GoogleSlideProps = {
-  slideUrl: string;
+  slide: Slide;
   currentSlide: number;
 };
 
 export const GoogleSlide: React.FC<GoogleSlideProps> = ({
-  slideUrl,
+  slide,
   currentSlide,
 }) => {
-  if (!slideUrl) {
+  if (!slide.url) {
     return (
       <Skeleton
         variant="rectangular"
@@ -25,13 +26,13 @@ export const GoogleSlide: React.FC<GoogleSlideProps> = ({
   return (
     <iframe
       id="slideFrame"
-      src={`${removeQueryParams(slideUrl).replace(
+      src={`${removeQueryParams(slide.url).replace(
         "pub",
         "embed"
       )}?start=false&slide=${currentSlide}`}
       style={{
-        width: "100%",
-        height: "100%",
+        width: "100%", // 横幅を親要素いっぱいに
+        height: "100%", // 高さを親要素いっぱいに
         flexGrow: 1,
         border: "none",
       }}

@@ -5,9 +5,9 @@ import { SetStateAction } from "react";
  * URLをコピー
  * @returns
  */
-export const handleCopyUrl = async (): Promise<boolean> => {
+export const handleCopyUrl = async (text: string): Promise<boolean> => {
   try {
-    await navigator.clipboard.writeText(location.href);
+    await navigator.clipboard.writeText(text);
     return true;
   } catch (err) {
     console.log("URLのコピーに失敗しました: ", err);
