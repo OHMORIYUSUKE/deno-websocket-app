@@ -1,4 +1,12 @@
-import { Button, TextField, Typography, CircularProgress } from "@mui/material";
+import {
+  Button,
+  TextField,
+  Typography,
+  CircularProgress,
+  Theme,
+  SxProps,
+  Box,
+} from "@mui/material";
 import { handleStartPresentation } from "../actions/handleStartPresentation";
 import { Dispatch, SetStateAction, useState } from "react";
 import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
@@ -8,12 +16,14 @@ type SlideFormProps = {
   slideUrl: string;
   setSlide: Dispatch<SetStateAction<Slide>>;
   router: AppRouterInstance;
+  sx?: SxProps<Theme> | undefined;
 };
 
 export const SlideForm: React.FC<SlideFormProps> = ({
   slideUrl,
   setSlide,
   router,
+  sx,
 }) => {
   const [loading, setLoading] = useState(false);
 
@@ -30,7 +40,7 @@ export const SlideForm: React.FC<SlideFormProps> = ({
 
   return (
     <>
-      <div style={{ width: "50%", margin: "0 auto" }}>
+      <Box sx={sx}>
         <TextField
           label="スライドURL"
           variant="outlined"
@@ -48,7 +58,8 @@ export const SlideForm: React.FC<SlideFormProps> = ({
           color="textSecondary"
           sx={{ marginBottom: 2, marginTop: 0 }}
         >
-          Google Slides の「ファイル」{">"}「共有」{">"}「ウェブに公開」
+          Google スライドの画面上部「ファイル」{">"}「共有」{">"}
+          「ウェブに公開」
           {">"}「リンク」からスライド公開用のURLを取得し入力してください。
         </Typography>
         <Button
@@ -63,7 +74,7 @@ export const SlideForm: React.FC<SlideFormProps> = ({
             "プレゼンテーション開始"
           )}
         </Button>
-      </div>
+      </Box>
     </>
   );
 };

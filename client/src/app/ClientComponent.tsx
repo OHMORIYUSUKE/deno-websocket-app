@@ -92,10 +92,38 @@ export const ClientComponent = () => {
             overflow: "hidden",
             justifyContent: "center",
             height: "100vh",
+            flexDirection: {
+              xs: "column",
+              sm: "row",
+            },
           }}
         >
-          <SlideForm slideUrl={slide.url} setSlide={setSlide} router={router} />
-          <SlidesTable slides={slides} setSlide={setSlide} />
+          <SlideForm
+            sx={{
+              width: {
+                xs: "100%",
+                sm: "50%",
+              },
+              margin: "0 auto",
+            }}
+            slideUrl={slide.url}
+            setSlide={setSlide}
+            router={router}
+          />
+          <SlidesTable
+            sx={{
+              width: {
+                xs: "100%",
+                sm: "50%",
+              },
+              margin: "0 auto",
+              maxHeight: "50%",
+              overflow: "auto",
+              padding: "0",
+            }}
+            slides={slides}
+            setSlide={setSlide}
+          />
         </Paper>
       ) : (
         <Box

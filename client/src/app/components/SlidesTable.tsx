@@ -1,27 +1,28 @@
-import { List, ListItem, ListItemText, Typography } from "@mui/material";
+import {
+  List,
+  ListItem,
+  ListItemText,
+  SxProps,
+  Theme,
+  Typography,
+} from "@mui/material";
 import { Slide } from "../fetch/types";
 import { Dispatch, SetStateAction } from "react";
 
 type SlidesTableProps = {
   slides: Slide[];
   setSlide: Dispatch<SetStateAction<Slide>>;
+  sx?: SxProps<Theme> | undefined;
 };
 
 export const SlidesTable: React.FC<SlidesTableProps> = ({
   slides,
   setSlide,
+  sx,
 }) => {
   return (
     <>
-      <List
-        sx={{
-          width: "50%",
-          margin: "0 auto",
-          maxHeight: "50%",
-          overflow: "auto",
-          padding: "0",
-        }}
-      >
+      <List sx={sx}>
         <Typography
           sx={{
             display: "flex",
